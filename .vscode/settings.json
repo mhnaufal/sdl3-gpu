@@ -1,5 +1,8 @@
 {
     "files.associations": {
         "xlocale": "c"
-    }
+    },
+    "cSpell.words": [
+        "SDLK"
+    ]
 }

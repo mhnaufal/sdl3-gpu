@@ -1,31 +1,45 @@
 // #define SDL_MAIN_HANDLED
+
+/* Pikuma
 #include "include/main.h"
+*/
+
+#include "include/main_gpu.h"
 
 #include <cstdio>
 #include <iostream>
 
 int main(int argc, char const* argv[])
 {
-    Vec2::Vec2 v{10.0f, 10.0f};
-
-    printf(MAG "x: %f | y: %f", v.x, v.y);
+    /* Pikuma
+    Vec2::Vec2 vertices[3] = {
+        {40, 40},
+        {80, 40},
+        {40, 80},
+    };
 
     ctx.is_playing = create_window();
 
-    while(ctx.is_playing) {
-        SDL_PollEvent(&ctx.event);
-        if (ctx.event.type == SDL_EVENT_QUIT || ctx.event.key.key == SDLK_ESCAPE) {
-            ctx.is_playing = false;
-        }
+    while (ctx.is_playing) {
+        process_input();
 
         update_framerate();
 
-        clear_framebuffer(0xFFBB8800);
-
-        render_framebuffer();
+        render(vertices);
     }
 
     destroy_window();
+    */
+
+    context::ContextGPU ctxgpu{};
+    ctxgpu.window_width = 1280;
+    ctxgpu.window_height = 720;
+
+    ctxgpu.is_playing = gpu::create_window(ctxgpu);
+    while (ctxgpu.is_playing) { 
+        gpu::process_input(ctxgpu);
+    }
+    gpu::destroy_window(ctxgpu);
 
     return 0;
 }
