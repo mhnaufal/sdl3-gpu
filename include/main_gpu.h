@@ -2,6 +2,7 @@
 
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_error.h"
+#include "SDL3/SDL_gpu.h"
 #include "SDL3/SDL_time.h"
 #include "SDL3/SDL_timer.h"
 
@@ -23,16 +24,19 @@
 namespace context {
 
 struct ContextGPU {
-    static inline bool is_playing{false};
+    bool is_playing{false};
 
-    static inline SDL_Window* window{};
-    static inline SDL_Renderer* renderer{};
-    static inline SDL_Texture* frame_buffer_texture{};
-    static inline SDL_Event event{};
+    SDL_Window* window{};
+    SDL_Renderer* renderer{};
+    SDL_Texture* frame_buffer_texture{};
+    SDL_Event event{};
+    SDL_GPUDevice* gpu_device{};
+    SDL_GPUCommandBuffer* command_buffer{};
+    SDL_GPUTexture* gpu_texture{};
 
-    static inline uint16_t window_width{1280};
-    static inline uint16_t window_height{720};
-    static inline const char* error{};
+    uint16_t window_width{1280};
+    uint16_t window_height{720};
+    const char* error{};
 };
 } // namespace context
 
@@ -40,6 +44,8 @@ namespace gpu {
 auto create_window(context::ContextGPU& ctx) -> bool;
 auto destroy_window(context::ContextGPU& ctx) -> void;
 auto process_input(context::ContextGPU& ctx) -> void;
+auto init_gpu_device(context::ContextGPU& ctx) -> bool;
+auto init_command_buffer(context::ContextGPU& ctx) -> bool;
 
 /****************************************/
 // Window
@@ -95,4 +101,22 @@ inline auto process_input(context::ContextGPU& ctx) -> void
         }
     }
 }
+
+inline auto init_gpu_device(context::ContextGPU& ctx) -> bool
+{
+    ctx.gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, nullptr);
+    auto ok = SDL_ClaimWindowForGPUDevice(ctx.gpu_device, ctx.window);
+
+    return ok;
+}
+
+inline auto init_command_buffer(context::ContextGPU& ctx) -> bool
+{
+    ctx.command_buffer = SDL_AcquireGPUCommandBuffer(ctx.gpu_device);
+    auto ok = SDL_WaitAndAcquireGPUSwapchainTexture(
+        ctx.command_buffer, ctx.window, &ctx.gpu_texture, nullptr, nullptr);
+
+    return ok;
+}
+
 } // namespace gpu
