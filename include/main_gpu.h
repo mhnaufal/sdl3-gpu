@@ -1,14 +1,23 @@
 #pragma once
 
-#include "SDL3/SDL.h"
-#include "SDL3/SDL_error.h"
-#include "SDL3/SDL_gpu.h"
-#include "SDL3/SDL_time.h"
-#include "SDL3/SDL_timer.h"
+#include "SDL3/include/SDL3/SDL.h"
+#include "SDL3/include/SDL3/SDL_error.h"
+#include "SDL3/include/SDL3/SDL_events.h"
+#include "SDL3/include/SDL3/SDL_gpu.h"
+#include "SDL3/include/SDL3/SDL_pixels.h"
+#include "SDL3/include/SDL3/SDL_render.h"
+#include "SDL3/include/SDL3/SDL_time.h"
+#include "SDL3/include/SDL3/SDL_timer.h"
+#include "SDL3/include/SDL3/SDL_video.h"
 
 #include <cstdint>
 #include <cstdlib>
 #include <stdio.h>
+#include <string>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <vector>
 
 #define CHECK_SDL_ERROR(CTX, ERROR_MSG, RETURN)                                                    \
     CTX.error = SDL_GetError();                                                                    \
@@ -46,6 +55,7 @@ auto destroy_window(context::ContextGPU& ctx) -> void;
 auto process_input(context::ContextGPU& ctx) -> void;
 auto init_gpu_device(context::ContextGPU& ctx) -> bool;
 auto init_command_buffer(context::ContextGPU& ctx) -> bool;
+auto read_shader_file(const char* path) -> std::vector<Uint8>;
 
 /****************************************/
 // Window
@@ -117,6 +127,19 @@ inline auto init_command_buffer(context::ContextGPU& ctx) -> bool
         ctx.command_buffer, ctx.window, &ctx.gpu_texture, nullptr, nullptr);
 
     return ok;
+}
+
+inline auto read_shader_file(const char* path) -> std::vector<Uint8>
+{
+    std::ifstream file(path, std::ios::binary | std::ios::ate);
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<Uint8> code(size);
+
+    file.read(reinterpret_cast<char*>(code.data()), size);
+    return code;
 }
 
 } // namespace gpu

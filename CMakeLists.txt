@@ -23,7 +23,7 @@ set(CPP_SOURCES
 )
 set(HEADER_SOURCES
 		include/main.h
-		include/SDL3/include/SDL3
+		include/SDL3/include/SDL3/
 )
 
 add_subdirectory(include/SDL3 EXCLUDE_FROM_ALL)
@@ -31,7 +31,7 @@ add_subdirectory(include/SDL3 EXCLUDE_FROM_ALL)
 add_executable(${PROJECT_NAME} ${HEADER_SOURCES} ${CPP_SOURCES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/SDL3/include)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/SDL3/include/SDL3/)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES})
 
@@ -40,15 +40,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES})
 # 		${PROJECT_NAME} PRIVATE SDL3main
 # 	)
 # endif()
-
-# TODO: separate Build and Release
-
-# #######################
-# # Raylib
-# #######################
-# find_package(raylib REQUIRED)
-# target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
-# target_include_directories(${PROJECT_NAME} PRIVATE ${raylib_INCLUDE_DIRS})
 
 # #######################
 # # Flecs
