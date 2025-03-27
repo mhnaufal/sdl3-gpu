@@ -10,6 +10,9 @@
 #include "SDL3/include/SDL3/SDL_timer.h"
 #include "SDL3/include/SDL3/SDL_video.h"
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <cstdint>
 #include <cstdlib>
 #include <stdio.h>
@@ -32,6 +35,11 @@
 /****************************************/
 namespace context {
 
+enum class ShaderType{
+    VERTEX,
+    FRAGMENT
+};
+
 struct ContextGPU {
     bool is_playing{false};
 
@@ -42,11 +50,27 @@ struct ContextGPU {
     SDL_GPUDevice* gpu_device{};
     SDL_GPUCommandBuffer* command_buffer{};
     SDL_GPUTexture* gpu_texture{};
+    SDL_GPUShader* vertex_shader{};
+    SDL_GPUShader* fragment_shader{};
+    SDL_GPUGraphicsPipeline* graphic_pipeline{};
 
     uint16_t window_width{1280};
     uint16_t window_height{720};
     const char* error{};
+
+    Uint64 last_tick{};
+    Uint64 new_tick{};
+    float rotation_rad{};
 };
+
+/*
+* Based on definition inside vert_manual.glsl
+*/
+struct UniformBufferObject
+{
+    glm::mat4x4 mvp{};
+};
+
 } // namespace context
 
 namespace gpu {
@@ -56,6 +80,8 @@ auto process_input(context::ContextGPU& ctx) -> void;
 auto init_gpu_device(context::ContextGPU& ctx) -> bool;
 auto init_command_buffer(context::ContextGPU& ctx) -> bool;
 auto read_shader_file(const char* path) -> std::vector<Uint8>;
+auto create_gpu_shader(context::ContextGPU& ctx, const std::string& path, context::ShaderType shader_type, Uint32 num_uniform_buffer) -> void;
+auto create_graphic_pipeline(context::ContextGPU& ctx) -> void;
 
 /****************************************/
 // Window
@@ -140,6 +166,54 @@ inline auto read_shader_file(const char* path) -> std::vector<Uint8>
 
     file.read(reinterpret_cast<char*>(code.data()), size);
     return code;
+}
+
+inline auto gpu::create_gpu_shader(
+    context::ContextGPU& ctx, const std::string& path, context::ShaderType shader_type, Uint32 num_uniform_buffer) -> void
+{
+    auto shader_code = gpu::read_shader_file(path.c_str());
+    auto shader_create_info = SDL_GPUShaderCreateInfo{};
+    shader_create_info.code_size = shader_code.size();
+    shader_create_info.code = shader_code.data();
+    shader_create_info.entrypoint= "main";
+    shader_create_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
+    if (shader_type == context::ShaderType::VERTEX)
+    {
+        shader_create_info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
+    } else if (shader_type == context::ShaderType::FRAGMENT)
+    {
+        shader_create_info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
+    }
+    shader_create_info.num_uniform_buffers = num_uniform_buffer;
+
+    auto shader = SDL_CreateGPUShader(ctx.gpu_device, &shader_create_info);
+
+    if (shader_type == context::ShaderType::VERTEX)
+    {
+        ctx.vertex_shader = shader;
+    } else if (shader_type == context::ShaderType::FRAGMENT)
+    {
+        ctx.fragment_shader = shader;
+    }
+}
+
+inline auto gpu::create_graphic_pipeline(context::ContextGPU& ctx) -> void
+{
+    auto color_target_desc = SDL_GPUColorTargetDescription{};
+    color_target_desc.format = SDL_GetGPUSwapchainTextureFormat(ctx.gpu_device, ctx.window);
+
+    auto pipeline_target_info = SDL_GPUGraphicsPipelineTargetInfo{};
+    pipeline_target_info.num_color_targets = 1;
+    pipeline_target_info.color_target_descriptions = &color_target_desc;
+
+    auto pipeline_create_info = SDL_GPUGraphicsPipelineCreateInfo{};
+    pipeline_create_info.vertex_shader = ctx.vertex_shader;
+    pipeline_create_info.fragment_shader = ctx.fragment_shader;
+    pipeline_create_info.primitive_type = SDL_GPUPrimitiveType::SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+    pipeline_create_info.target_info = pipeline_target_info;
+
+    auto pipeline = SDL_CreateGPUGraphicsPipeline(ctx.gpu_device, &pipeline_create_info);
+    ctx.graphic_pipeline = pipeline;
 }
 
 } // namespace gpu

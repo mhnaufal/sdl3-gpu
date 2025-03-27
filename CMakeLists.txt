@@ -23,15 +23,18 @@ set(CPP_SOURCES
 )
 set(HEADER_SOURCES
 		include/main.h
-		include/SDL3/include/SDL3/
+		include/SDL3/include/SDL3
+		include/glm
 )
 
 add_subdirectory(include/SDL3 EXCLUDE_FROM_ALL)
+add_subdirectory(include/glm EXCLUDE_FROM_ALL)
 
 add_executable(${PROJECT_NAME} ${HEADER_SOURCES} ${CPP_SOURCES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/SDL3/include/SDL3/)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/glm)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES})
 
@@ -40,6 +43,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES})
 # 		${PROJECT_NAME} PRIVATE SDL3main
 # 	)
 # endif()
+
+# #######################
+# # GLM
+# #######################
+set(glm_DIR ${CMAKE_SOURCE_DIR}/include/glm)
 
 # #######################
 # # Flecs

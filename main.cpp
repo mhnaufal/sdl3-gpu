@@ -39,43 +39,30 @@ int main(int argc, char const* argv[])
     ctxgpu.is_playing = gpu::create_window(ctxgpu);
     auto ok = gpu::init_gpu_device(ctxgpu);
 
-    auto vert_code = gpu::read_shader_file("../../../../shaders/shader.spv.vert");
-    auto shader_create_info_vert = SDL_GPUShaderCreateInfo{};
-    shader_create_info_vert.code_size = vert_code.size();
-    shader_create_info_vert.code = vert_code.data();
-    shader_create_info_vert.entrypoint= "main";
-    shader_create_info_vert.format = SDL_GPU_SHADERFORMAT_SPIRV;
-    shader_create_info_vert.stage = SDL_GPU_SHADERSTAGE_VERTEX;
-    auto vert_shader = SDL_CreateGPUShader(ctxgpu.gpu_device, &shader_create_info_vert);
+    /* 
+    ! because UBO exists inside vertex_glsl, but not fragment_glsl
+    */
+    gpu::create_gpu_shader(ctxgpu, std::string{"../../../../shaders/shader.spv.vert"}, context::ShaderType::VERTEX, 1);
+    gpu::create_gpu_shader(ctxgpu, std::string{"../../../../shaders/shader.spv.frag"}, context::ShaderType::FRAGMENT, 0);
+    gpu::create_graphic_pipeline(ctxgpu);
+    SDL_ReleaseGPUShader(ctxgpu.gpu_device, ctxgpu.vertex_shader);
+    SDL_ReleaseGPUShader(ctxgpu.gpu_device, ctxgpu.fragment_shader);
 
-    auto frag_code = gpu::read_shader_file("../../../../shaders/shader.spv.frag");
-    auto shader_create_info_frag = SDL_GPUShaderCreateInfo{};
-    shader_create_info_frag.code_size = frag_code.size();
-    shader_create_info_frag.code = frag_code.data();
-    shader_create_info_frag.entrypoint= "main";
-    shader_create_info_frag.format = SDL_GPU_SHADERFORMAT_SPIRV;
-    shader_create_info_frag.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
-    auto frag_shader = SDL_CreateGPUShader(ctxgpu.gpu_device, &shader_create_info_frag);
+    int w{}, h{};
+    SDL_GetWindowSize(ctxgpu.window, &w, &h);
+    float fov = glm::radians(70.0f);
+    float near_plane = 0.0001f;
+    float far_plane = 1000.0f;
+    glm::mat4 projection_mat = glm::perspective(fov, (float)w/h, near_plane, far_plane);
 
-    auto color_target_desc = SDL_GPUColorTargetDescription{};
-    color_target_desc.format = SDL_GetGPUSwapchainTextureFormat(ctxgpu.gpu_device, ctxgpu.window);
-
-    auto pipeline_target_info = SDL_GPUGraphicsPipelineTargetInfo{};
-    pipeline_target_info.num_color_targets = 1;
-    pipeline_target_info.color_target_descriptions = &color_target_desc;
-
-    auto pipeline_create_info = SDL_GPUGraphicsPipelineCreateInfo{};
-    pipeline_create_info.vertex_shader = vert_shader;
-    pipeline_create_info.fragment_shader = frag_shader;
-    pipeline_create_info.primitive_type = SDL_GPUPrimitiveType::SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-    pipeline_create_info.target_info = pipeline_target_info;
-
-    auto pipeline = SDL_CreateGPUGraphicsPipeline(ctxgpu.gpu_device, &pipeline_create_info);
-
-    SDL_ReleaseGPUShader(ctxgpu.gpu_device, vert_shader);
-    SDL_ReleaseGPUShader(ctxgpu.gpu_device, frag_shader);
+    ctxgpu.rotation_rad = glm::radians(-45.0f);
+    ctxgpu.last_tick = SDL_GetTicks();
 
     while (ctxgpu.is_playing && ok) {
+        ctxgpu.new_tick = SDL_GetTicks();
+        float delta_tick = (float)(ctxgpu.new_tick - ctxgpu.last_tick) / 1000.0f;
+        ctxgpu.last_tick = ctxgpu.new_tick;
+
         // [1] Process Events
         gpu::process_input(ctxgpu);
 
@@ -84,6 +71,15 @@ int main(int argc, char const* argv[])
         // [3] Acquire command buffer
         // [4] Acquire swapchain texture: texture that will be rendered
         gpu::init_command_buffer(ctxgpu);
+
+        ctxgpu.rotation_rad += glm::radians(10.0f) * delta_tick;
+        glm::mat4 rotation_mat = glm::rotate(projection_mat, ctxgpu.rotation_rad, glm::vec3(0, 1, 0));
+        auto ubo = context::UniformBufferObject{};
+        ubo.mvp = glm::rotate((glm::translate(projection_mat, glm::vec3(0,0,-5))), ctxgpu.rotation_rad, glm::vec3(0,0,1));
+        /*
+        * glm::translate(projection_mat, glm::vec3(0,0,-5)); mundurin triangle ke belakang biar ga nabrak camera
+        * glm::rotate((glm::translate(projection_mat, glm::vec3(0,0,-5))), ctxgpu.rotation_rad, glm::vec3(0,0,1)) rotasi searah jarum jam
+        */
 
         if (ctxgpu.gpu_texture) {
             // [5] Begin render pass
@@ -97,9 +93,9 @@ int main(int argc, char const* argv[])
 
             // [6] Draw
                 // - Bind pipeline
-                SDL_BindGPUGraphicsPipeline(render_pass, pipeline);
-                // - Bind vertex buffer/data
-                // - Bind unform buffer/data
+                SDL_BindGPUGraphicsPipeline(render_pass, ctxgpu.graphic_pipeline);
+                // - Bind vertex buffer/data & Bind unform buffer/data
+                SDL_PushGPUVertexUniformData(ctxgpu.command_buffer, 0 /*binding*/, &ubo, sizeof(ubo));
                 // - draw calls
                 SDL_DrawGPUPrimitives(render_pass, 3, 1, 0, 0);
                 

@@ -73,6 +73,7 @@
         "SDLK",
         "SHADERFORMAT",
         "SHADERSTAGE",
-        "SPIRV"
+        "SPIRV",
+        "swapchain"
     ]
 }
