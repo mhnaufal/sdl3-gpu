@@ -10,6 +10,9 @@
 #include "SDL3/include/SDL3/SDL_timer.h"
 #include "SDL3/include/SDL3/SDL_video.h"
 
+#include "FMOD/fmod.hpp"
+#include "FMOD/fmod_errors.h"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -33,6 +36,11 @@
 
 #define LENGTH(x) (sizeof(x) / sizeof((x)[0]))
 
+#define FMOD_CHECK(x)                                                                              \
+    if (x != FMOD_OK) {                                                                            \
+        fprintf(stderr, FMOD_ErrorString(x));                           \
+    }
+
 /****************************************/
 // Global Context
 /****************************************/
@@ -43,7 +51,7 @@ enum class ShaderType{
     FRAGMENT
 };
 
-struct ContextGPU {
+struct ContextGraphic {
     bool is_playing{false};
 
     SDL_Window* window{};
@@ -66,6 +74,48 @@ struct ContextGPU {
     float rotation_rad{};
 };
 
+struct ContextAudio {
+public:
+    ContextAudio()
+        : music(nullptr)
+        , channel(nullptr)
+    {
+        FMOD_CHECK(FMOD::System_Create(&system));
+        FMOD_CHECK(system->init(512, FMOD_INIT_NORMAL, nullptr));
+    }
+
+    auto PlayMusic(const char* path, bool loop = true)
+    {
+        if (channel) {
+            channel->stop();
+            music->release();
+        }
+
+        FMOD_MODE mode = FMOD_LOOP_NORMAL | FMOD_2D;
+        if (!loop)
+            mode = FMOD_LOOP_OFF;
+
+        FMOD_CHECK(system->createStream(path, mode, nullptr, &music));
+
+        FMOD_CHECK(system->playSound(music, nullptr, false, &channel));
+    }
+
+    auto UpdateMusic() -> void { system->update(); }
+
+    ~ContextAudio()
+    {
+        if (music)
+            music->release();
+        system->close();
+        system->release();
+    }
+
+private:
+    FMOD::System* system{};
+    FMOD::Sound* music{};
+    FMOD::Channel* channel{};
+};
+
 /*
 * Based on definition inside vert_manual.glsl
 */
@@ -82,19 +132,19 @@ struct Vec3Buffer
 } // namespace context
 
 namespace gpu {
-auto create_window(context::ContextGPU& ctx) -> bool;
-auto destroy_window(context::ContextGPU& ctx) -> void;
-auto process_input(context::ContextGPU& ctx) -> void;
-auto init_gpu_device(context::ContextGPU& ctx) -> bool;
-auto init_command_buffer(context::ContextGPU& ctx) -> bool;
+auto create_window(context::ContextGraphic& ctx) -> bool;
+auto destroy_window(context::ContextGraphic& ctx) -> void;
+auto process_input(context::ContextGraphic& ctx) -> void;
+auto init_gpu_device(context::ContextGraphic& ctx) -> bool;
+auto init_command_buffer(context::ContextGraphic& ctx) -> bool;
 auto read_shader_file(const char* path) -> std::vector<Uint8>;
-auto create_gpu_shader(context::ContextGPU& ctx, const std::string& path, context::ShaderType shader_type, Uint32 num_uniform_buffer) -> void;
-auto create_graphic_pipeline(context::ContextGPU& ctx) -> void;
+auto create_gpu_shader(context::ContextGraphic& ctx, const std::string& path, context::ShaderType shader_type, Uint32 num_uniform_buffer) -> void;
+auto create_graphic_pipeline(context::ContextGraphic& ctx) -> void;
 
 /****************************************/
 // Window
 /****************************************/
-auto create_window(context::ContextGPU& ctx) -> bool
+auto create_window(context::ContextGraphic& ctx) -> bool
 {
     if (SDL_Init(SDL_INIT_VIDEO) != true) {
         fprintf(stderr, "Failed to initialize SDL");
@@ -122,7 +172,7 @@ auto create_window(context::ContextGPU& ctx) -> bool
     return true;
 }
 
-inline auto destroy_window(context::ContextGPU& ctx) -> void
+inline auto destroy_window(context::ContextGraphic& ctx) -> void
 {
     SDL_DestroyTexture(ctx.frame_buffer_texture);
     SDL_DestroyRenderer(ctx.renderer);
@@ -130,7 +180,7 @@ inline auto destroy_window(context::ContextGPU& ctx) -> void
     SDL_Quit();
 }
 
-inline auto process_input(context::ContextGPU& ctx) -> void
+inline auto process_input(context::ContextGraphic& ctx) -> void
 {
     while (SDL_PollEvent(&ctx.event)) {
         switch (ctx.event.type) {
@@ -146,7 +196,7 @@ inline auto process_input(context::ContextGPU& ctx) -> void
     }
 }
 
-inline auto init_gpu_device(context::ContextGPU& ctx) -> bool
+inline auto init_gpu_device(context::ContextGraphic& ctx) -> bool
 {
     ctx.gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, nullptr);
     auto ok = SDL_ClaimWindowForGPUDevice(ctx.gpu_device, ctx.window);
@@ -154,7 +204,7 @@ inline auto init_gpu_device(context::ContextGPU& ctx) -> bool
     return ok;
 }
 
-inline auto init_command_buffer(context::ContextGPU& ctx) -> bool
+inline auto init_command_buffer(context::ContextGraphic& ctx) -> bool
 {
     ctx.command_buffer = SDL_AcquireGPUCommandBuffer(ctx.gpu_device);
     auto ok = SDL_WaitAndAcquireGPUSwapchainTexture(
@@ -177,7 +227,7 @@ inline auto read_shader_file(const char* path) -> std::vector<Uint8>
 }
 
 inline auto gpu::create_gpu_shader(
-    context::ContextGPU& ctx, const std::string& path, context::ShaderType shader_type, Uint32 num_uniform_buffer) -> void
+    context::ContextGraphic& ctx, const std::string& path, context::ShaderType shader_type, Uint32 num_uniform_buffer) -> void
 {
     auto shader_code = gpu::read_shader_file(path.c_str());
     auto shader_create_info = SDL_GPUShaderCreateInfo{};
@@ -205,7 +255,7 @@ inline auto gpu::create_gpu_shader(
     }
 }
 
-inline auto gpu::create_graphic_pipeline(context::ContextGPU& ctx) -> void
+inline auto gpu::create_graphic_pipeline(context::ContextGraphic& ctx) -> void
 {
     auto color_target_desc = SDL_GPUColorTargetDescription{};
     color_target_desc.format = SDL_GetGPUSwapchainTextureFormat(ctx.gpu_device, ctx.window);

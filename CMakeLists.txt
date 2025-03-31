@@ -10,6 +10,15 @@ project(
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE CACHE BOOL "" FORCE)
 set(CMAKE_CXX_STANDARD 17)
 
+set(FMOD_DIR "${CMAKE_SOURCE_DIR}/include/FMOD")
+set(FMOD_INCLUDE_DIR "${FMOD_DIR}")
+set(FMOD_LIBRARY_DIR "${FMOD_DIR}")
+
+if(WIN32)
+	set(FMOD_LIBRARY "${FMOD_LIBRARY_DIR}/fmod_vc.lib")
+    set(FMOD_DEBUG_LIBRARY "${FMOD_LIBRARY_DIR}/fmodL_vc.lib")
+endif()
+
 if(MSVC)
 	set(CMAKE_CXX_FLAGS "/Wall /std:c++17 /W4 /sdl /EHsc")
 endif()
@@ -35,8 +44,9 @@ add_executable(${PROJECT_NAME} ${HEADER_SOURCES} ${CPP_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/SDL3/include/SDL3/)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/glm)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/FMOD)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES} ${FMOD_DEBUG_LIBRARY})
 
 # if (WIN32)
 # 	target_link_libraries(
@@ -71,10 +81,22 @@ if(MSVC)
 	target_link_libraries(${PROJECT_NAME} PRIVATE wsock32 ws2_32)
 endif()
 
-add_custom_command(
-	TARGET ${PROJECT_NAME} POST_BUILD COMMAND
-	${CMAKE_COMMAND} -E copy_if_different
-		$<TARGET_FILE:SDL3::SDL3>
-		$<TARGET_FILE_DIR:${PROJECT_NAME}>
-		VERBATIM
-)
+if(WIN32)
+	add_custom_command(
+		TARGET ${PROJECT_NAME} POST_BUILD COMMAND
+		${CMAKE_COMMAND} -E copy_if_different
+			$<TARGET_FILE:SDL3::SDL3>
+			$<TARGET_FILE_DIR:${PROJECT_NAME}>
+			VERBATIM
+	)
+
+	add_custom_command(
+		TARGET ${PROJECT_NAME} POST_BUILD COMMAND
+		${CMAKE_COMMAND} -E copy_if_different
+			"${FMOD_DIR}/fmodL.dll"
+			$<TARGET_FILE_DIR:${PROJECT_NAME}>
+			VERBATIM
+	)
+endif()
+
+file(COPY resource/ DESTINATION ${CMAKE_BINARY_DIR}/resource)
