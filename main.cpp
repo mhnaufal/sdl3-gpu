@@ -44,7 +44,9 @@ int main(int argc, char const* argv[])
     ctxgpc.is_playing = gpu::create_window(ctxgpc);
     auto ok = gpu::init_gpu_device(ctxgpc);
 
-    /* Using Vertex Buffer
+    /* Using Vertex Buffer: 
+    ? Dengan ini kita bisa spesify data vertices yg ingin kita gambar lewat C++ instead of dari shader.
+    ? Kita tinggal ngasih tau bagaimana struktur data yg kita kirim ke GPU
     * [1] Describe Vertex Attributes & Vertex Buffer in pipeline
     * [2] Create Vertex Data
     * [3] Create Vertex Buffer
@@ -58,9 +60,19 @@ int main(int argc, char const* argv[])
     ? https://vulkan-tutorial.com/Vertex_buffers/Vertex_buffer_creation
     */
     context::Vec3Buffer vertices[3] = {
-        context::Vec3Buffer{{-0.5f, -0.5f, 0.0f}},
-        context::Vec3Buffer{{0.0f, 0.5f, 0.0f}},
-        context::Vec3Buffer{{0.5f, -0.5f, 0.0f}}};
+        {
+            {-0.5f, -0.5f, 0.0f},
+            {1.0f, 0.0f, 0.0f, 1.0f}
+        },
+        {
+            {0.0f, 0.5f, 0.0f},
+            {0.5f, 1.0f, 0.0f, 1.0f}
+        },
+        {
+            {0.5f, -0.5f, 0.0f},
+            {0.2f, 0.7f, 0.3f, 1.0f}
+        }
+    };
     auto vertices_byte_size = LENGTH(vertices) * sizeof(vertices[0]);
 
     auto vertex_buffer_create_info = SDL_GPUBufferCreateInfo{};
@@ -78,7 +90,8 @@ int main(int argc, char const* argv[])
     SDL_UnmapGPUTransferBuffer(ctxgpc.gpu_device, transfer_buffer);
 
     auto copy_cmd_buffer = SDL_AcquireGPUCommandBuffer(ctxgpc.gpu_device);
-    auto copy_pass = SDL_BeginGPUCopyPass(copy_cmd_buffer);
+    auto copy_pass =
+    SDL_BeginGPUCopyPass(copy_cmd_buffer);
         auto buffer_location = SDL_GPUTransferBufferLocation{};
         buffer_location.transfer_buffer = transfer_buffer;
         auto buffer_region = SDL_GPUBufferRegion{};
@@ -87,6 +100,7 @@ int main(int argc, char const* argv[])
         buffer_region.offset = 0;
             SDL_UploadToGPUBuffer(copy_pass, &buffer_location, &buffer_region, false);
     SDL_EndGPUCopyPass(copy_pass);
+
     auto ok2 = SDL_SubmitGPUCommandBuffer(copy_cmd_buffer);
     SDL_ReleaseGPUTransferBuffer(ctxgpc.gpu_device, transfer_buffer);
 
@@ -135,7 +149,7 @@ int main(int argc, char const* argv[])
         ctxgpc.rotation_rad += glm::radians(10.0f) * delta_tick;
         glm::mat4 rotation_mat = glm::rotate(projection_mat, ctxgpc.rotation_rad, glm::vec3(0, 1, 0));
         auto ubo = context::UniformBufferObject{};
-        ubo.mvp = glm::rotate((glm::translate(projection_mat, glm::vec3(0,0,-5))), ctxgpc.rotation_rad, glm::vec3(0,0,1));
+        ubo.mvp = glm::rotate((glm::translate(projection_mat, glm::vec3(0,0,-2))), ctxgpc.rotation_rad, glm::vec3(0,0,1));
         /*
         ! glm::translate(projection_mat, glm::vec3(0,0,-5)); mundurin triangle ke belakang biar ga nabrak camera
         ! glm::rotate((glm::translate(projection_mat, glm::vec3(0,0,-5))), ctxgpc.rotation_rad, glm::vec3(0,0,1)) rotasi searah jarum jam
@@ -146,7 +160,7 @@ int main(int argc, char const* argv[])
             // where we actually doing the rendering, which encoded into Command Buffer
             auto color_info = SDL_GPUColorTargetInfo{};
             color_info.texture = ctxgpc.gpu_texture;
-            color_info.clear_color = SDL_FColor{0.1f, 0.2f, 0.45f, 1.0f};
+            color_info.clear_color = SDL_FColor{0.05f, 0.1f, 0.35f, 1.0f};
             color_info.load_op = SDL_GPULoadOp::SDL_GPU_LOADOP_CLEAR;
             color_info.store_op = SDL_GPUStoreOp::SDL_GPU_STOREOP_STORE;
             auto render_pass = SDL_BeginGPURenderPass(ctxgpc.command_buffer, &color_info, 1, nullptr);

@@ -38,7 +38,7 @@
 
 #define FMOD_CHECK(x)                                                                              \
     if (x != FMOD_OK) {                                                                            \
-        fprintf(stderr, FMOD_ErrorString(x));                           \
+        fprintf(stderr, FMOD_ErrorString(x));                                                      \
     }
 
 /****************************************/
@@ -127,6 +127,7 @@ struct UniformBufferObject
 struct Vec3Buffer 
 {
     glm::vec3 position{};
+    SDL_FColor color{};
 };
 
 } // namespace context
@@ -264,27 +265,33 @@ inline auto gpu::create_graphic_pipeline(context::ContextGraphic& ctx) -> void
     pipeline_target_info.num_color_targets = 1;
     pipeline_target_info.color_target_descriptions = &color_target_desc;
 
-    // Vertex Buffer
+    //* Vertex Attribute: definisi struktur dari vertex buffer yg akan dikirim ke GPU
+    auto vertex_attribute_pos = SDL_GPUVertexAttribute{};
+    vertex_attribute_pos.location = 0; /* didapat dari shader code */
+    vertex_attribute_pos.buffer_slot = 0;
+    vertex_attribute_pos.offset =
+        offsetof(context::Vec3Buffer, position); /* offset data yg bakal dikirim ke GPU */
+    vertex_attribute_pos.format = SDL_GPUVertexElementFormat::SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+
+    auto vertex_attribute_color = SDL_GPUVertexAttribute{};
+    vertex_attribute_color.location = 1;
+    vertex_attribute_color.buffer_slot = 0;
+    vertex_attribute_color.offset = offsetof(context::Vec3Buffer, color);
+    vertex_attribute_color.format = SDL_GPUVertexElementFormat::SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
+
+    SDL_GPUVertexAttribute vas[] = {vertex_attribute_pos, vertex_attribute_color};
+
+    //* Vertex Buffer: struktur vertex buffer yg dipasang ke pipeline
     auto vertex_buffer_description = SDL_GPUVertexBufferDescription{};
     vertex_buffer_description.slot = 0;
     vertex_buffer_description.pitch = sizeof(context::Vec3Buffer);
     vertex_buffer_description.input_rate = SDL_GPUVertexInputRate::SDL_GPU_VERTEXINPUTRATE_VERTEX;
     vertex_buffer_description.instance_step_rate = 0;
 
-    // Vertex Attribute
-    auto vertex_attribute = SDL_GPUVertexAttribute{};
-    vertex_attribute.location = 0; /* didapat dari shader code */
-    vertex_attribute.buffer_slot = 0;
-    vertex_attribute.offset =
-        offsetof(context::Vec3Buffer, position); /* offset data yg bakal dikirim ke GPU */
-    vertex_attribute.format = SDL_GPUVertexElementFormat::SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
-
-    SDL_GPUVertexAttribute vas[] = {vertex_attribute};
-
     auto vertex_input_state = SDL_GPUVertexInputState{};
     vertex_input_state.num_vertex_buffers = 1;
     vertex_input_state.vertex_buffer_descriptions = &vertex_buffer_description;
-    vertex_input_state.num_vertex_attributes = (Uint32)LENGTH(vas); /* banyaknya vertex attribute yg ada hanya 1 */
+    vertex_input_state.num_vertex_attributes = (Uint32)LENGTH(vas); /* banyaknya vertex attribute(vas) yg ada hanya 2 */
     vertex_input_state.vertex_attributes = vas;
 
     auto pipeline_create_info = SDL_GPUGraphicsPipelineCreateInfo{};
