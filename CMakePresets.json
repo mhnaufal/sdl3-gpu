@@ -3,9 +3,21 @@
     "configurePresets": [
         {
             "name": "build",
-            "displayName": "Configure preset using toolchain file",
+            "displayName": "debug-sln",
             "description": "Sets Ninja generator, build and install directory",
             "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_TOOLCHAIN_FILE": "",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+            }
+        },
+        {
+            "name": "debug-ninja",
+            "displayName": "debug-ninja",
+            "description": "Sets Ninja generator, build and install directory",
+            "generator": "Ninja",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",

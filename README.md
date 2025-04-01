@@ -1,16 +1,17 @@
-# Game Engine Development is CRAZY
+# BUBUK | Game Engine Development is CRAZY
 
 My attempt to create some sort of "game engine" from _scratch_ by adding libraries that already exist out there.
 
 | Category              | Tools               |
-|-----------------------|---------------------|
+| --------------------- | ------------------- |
 | Rendering             | SDL3                |
 |                       | The Forge Framework |
 | Audio                 | FMOD                |
 | Logging               | ?                   |
-| GUI                   | ?                   |
+| GUI                   | Noesis              |
 | 3D Object/Mesh Loader | ?                   |
 | Math                  | GLM                 |
+| Physic                | PhysX               |
 
 ## Tutorial
 

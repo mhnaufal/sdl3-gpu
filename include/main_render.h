@@ -1,5 +1,14 @@
+// NOT A PROJECT TO BE TAKEN SERIOUSLY
+// Render: SDL3 (https://www.libsdl.org/)
+// The Forge (https://github.com/ConfettiFX/The-Forge/wiki/)
+
 #pragma once
 
+// bubuk
+#include "main_helper.h"
+#include "main_global.h"
+
+// SDL
 #include "SDL3/include/SDL3/SDL.h"
 #include "SDL3/include/SDL3/SDL_error.h"
 #include "SDL3/include/SDL3/SDL_events.h"
@@ -10,9 +19,7 @@
 #include "SDL3/include/SDL3/SDL_timer.h"
 #include "SDL3/include/SDL3/SDL_video.h"
 
-#include "FMOD/fmod.hpp"
-#include "FMOD/fmod_errors.h"
-
+// STD
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -26,34 +33,14 @@
 #include <string>
 #include <vector>
 
-#define CHECK_SDL_ERROR(CTX, ERROR_MSG, RETURN)                                                    \
-    CTX.error = SDL_GetError();                                                                    \
-    if (*CTX.error != NULL) {                                                                      \
-        fprintf(stderr, ERROR_MSG);                                                                \
-        fprintf(stderr, CTX.error);                                                                \
-        return RETURN;                                                                             \
-    }
-
-#define LENGTH(x) (sizeof(x) / sizeof((x)[0]))
-
-#define FMOD_CHECK(x)                                                                              \
-    if (x != FMOD_OK) {                                                                            \
-        fprintf(stderr, FMOD_ErrorString(x));                                                      \
-    }
-
 /****************************************/
-// Global Context
+// Render Context
 /****************************************/
 namespace context {
 
-enum class ShaderType{
-    VERTEX,
-    FRAGMENT
-};
+enum class ShaderType { VERTEX, FRAGMENT };
 
-struct ContextGraphic {
-    bool is_playing{false};
-
+struct ContextRender {
     SDL_Window* window{};
     SDL_Renderer* renderer{};
     SDL_Texture* frame_buffer_texture{};
@@ -65,115 +52,70 @@ struct ContextGraphic {
     SDL_GPUShader* fragment_shader{};
     SDL_GPUGraphicsPipeline* graphic_pipeline{};
 
-    uint16_t window_width{1280};
-    uint16_t window_height{720};
     const char* error{};
-
-    Uint64 last_tick = {};
-    Uint64 new_tick = {};
     float rotation_rad{};
 };
 
-struct ContextAudio {
-public:
-    ContextAudio()
-        : music(nullptr)
-        , channel(nullptr)
-    {
-        FMOD_CHECK(FMOD::System_Create(&system));
-        FMOD_CHECK(system->init(512, FMOD_INIT_NORMAL, nullptr));
-    }
-
-    auto PlayMusic(const char* path, bool loop = true)
-    {
-        if (channel) {
-            channel->stop();
-            music->release();
-        }
-
-        FMOD_MODE mode = FMOD_LOOP_NORMAL | FMOD_2D;
-        if (!loop)
-            mode = FMOD_LOOP_OFF;
-
-        FMOD_CHECK(system->createStream(path, mode, nullptr, &music));
-
-        FMOD_CHECK(system->playSound(music, nullptr, false, &channel));
-    }
-
-    auto UpdateMusic() -> void { system->update(); }
-
-    ~ContextAudio()
-    {
-        if (music)
-            music->release();
-        system->close();
-        system->release();
-    }
-
-private:
-    FMOD::System* system{};
-    FMOD::Sound* music{};
-    FMOD::Channel* channel{};
-};
-
 /*
-* Based on definition inside vert_manual.glsl
-*/
-struct UniformBufferObject
-{
+ * Based on definition inside vert_manual.glsl
+ */
+struct UniformBufferObject {
     glm::mat4x4 mvp{};
 };
 
-struct Vec3Buffer 
-{
+struct Vec3Buffer {
     glm::vec3 position{};
     SDL_FColor color{};
 };
 
-} // namespace context
+struct ContextRenderForge {};
 
 namespace gpu {
-auto create_window(context::ContextGraphic& ctx) -> bool;
-auto destroy_window(context::ContextGraphic& ctx) -> void;
-auto process_input(context::ContextGraphic& ctx) -> void;
-auto init_gpu_device(context::ContextGraphic& ctx) -> bool;
-auto init_command_buffer(context::ContextGraphic& ctx) -> bool;
+auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxglob) -> bool;
+auto destroy_window(context::ContextRender& ctx) -> void;
+auto process_input(context::ContextRender& ctxren, context::ContextGlobal& ctxglob) -> void;
+auto init_gpu_device(context::ContextRender& ctx) -> bool;
+auto init_command_buffer(context::ContextRender& ctx) -> bool;
 auto read_shader_file(const char* path) -> std::vector<Uint8>;
-auto create_gpu_shader(context::ContextGraphic& ctx, const std::string& path, context::ShaderType shader_type, Uint32 num_uniform_buffer) -> void;
-auto create_graphic_pipeline(context::ContextGraphic& ctx) -> void;
+auto create_gpu_shader(
+    context::ContextRender& ctx,
+    const std::string& path,
+    context::ShaderType shader_type,
+    Uint32 num_uniform_buffer) -> void;
+auto create_graphic_pipeline(context::ContextRender& ctx) -> void;
 
 /****************************************/
 // Window
 /****************************************/
-auto create_window(context::ContextGraphic& ctx) -> bool
+auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxglob) -> bool
 {
     if (SDL_Init(SDL_INIT_VIDEO) != true) {
         fprintf(stderr, "Failed to initialize SDL");
         return false;
     }
 
-    ctx.window = SDL_CreateWindow(
+    ctxren.window = SDL_CreateWindow(
         "SDL 3 GPU Vulkan",
-        ctx.window_width,
-        ctx.window_height,
+        ctxglob.window_width,
+        ctxglob.window_height,
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
-    CHECK_SDL_ERROR(ctx, "Failed to create Window", false);
+    SDL_CHECK_ERROR(ctxren, "Failed to create Window", false);
 
-    ctx.renderer = SDL_CreateRenderer(ctx.window, nullptr);
-    CHECK_SDL_ERROR(ctx, "Failed to create Renderer", false);
+    ctxren.renderer = SDL_CreateRenderer(ctxren.window, nullptr);
+    SDL_CHECK_ERROR(ctxren, "Failed to create Renderer", false);
 
-    ctx.frame_buffer_texture = SDL_CreateTexture(
-        ctx.renderer,
+    ctxren.frame_buffer_texture = SDL_CreateTexture(
+        ctxren.renderer,
         SDL_PIXELFORMAT_RGBA8888,
         SDL_TEXTUREACCESS_TARGET,
-        ctx.window_width,
-        ctx.window_height);
-    CHECK_SDL_ERROR(ctx, "Failed to create Frame Buffer Texture", false);
+        ctxglob.window_width,
+        ctxglob.window_height);
+    SDL_CHECK_ERROR(ctxren, "Failed to create Frame Buffer Texture", false);
 
     return true;
 }
 
-inline auto destroy_window(context::ContextGraphic& ctx) -> void
+inline auto destroy_window(context::ContextRender& ctx) -> void
 {
     SDL_DestroyTexture(ctx.frame_buffer_texture);
     SDL_DestroyRenderer(ctx.renderer);
@@ -181,23 +123,23 @@ inline auto destroy_window(context::ContextGraphic& ctx) -> void
     SDL_Quit();
 }
 
-inline auto process_input(context::ContextGraphic& ctx) -> void
+inline auto process_input(context::ContextRender& ctxren, context::ContextGlobal& ctxglob) -> void
 {
-    while (SDL_PollEvent(&ctx.event)) {
-        switch (ctx.event.type) {
+    while (SDL_PollEvent(&ctxren.event)) {
+        switch (ctxren.event.type) {
         case SDL_EVENT_QUIT:
-            ctx.is_playing = false;
+            ctxglob.is_playing = false;
             break;
         case SDL_EVENT_KEY_DOWN:
-            if (ctx.event.key.key == SDLK_ESCAPE) {
-                ctx.is_playing = false;
+            if (ctxren.event.key.key == SDLK_ESCAPE) {
+                ctxglob.is_playing = false;
                 break;
             }
         }
     }
 }
 
-inline auto init_gpu_device(context::ContextGraphic& ctx) -> bool
+inline auto init_gpu_device(context::ContextRender& ctx) -> bool
 {
     ctx.gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, nullptr);
     auto ok = SDL_ClaimWindowForGPUDevice(ctx.gpu_device, ctx.window);
@@ -205,7 +147,7 @@ inline auto init_gpu_device(context::ContextGraphic& ctx) -> bool
     return ok;
 }
 
-inline auto init_command_buffer(context::ContextGraphic& ctx) -> bool
+inline auto init_command_buffer(context::ContextRender& ctx) -> bool
 {
     ctx.command_buffer = SDL_AcquireGPUCommandBuffer(ctx.gpu_device);
     auto ok = SDL_WaitAndAcquireGPUSwapchainTexture(
@@ -228,35 +170,36 @@ inline auto read_shader_file(const char* path) -> std::vector<Uint8>
 }
 
 inline auto gpu::create_gpu_shader(
-    context::ContextGraphic& ctx, const std::string& path, context::ShaderType shader_type, Uint32 num_uniform_buffer) -> void
+    context::ContextRender& ctx,
+    const std::string& path,
+    context::ShaderType shader_type,
+    Uint32 num_uniform_buffer) -> void
 {
     auto shader_code = gpu::read_shader_file(path.c_str());
     auto shader_create_info = SDL_GPUShaderCreateInfo{};
     shader_create_info.code_size = shader_code.size();
     shader_create_info.code = shader_code.data();
-    shader_create_info.entrypoint= "main";
+    shader_create_info.entrypoint = "main";
     shader_create_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
-    if (shader_type == context::ShaderType::VERTEX)
-    {
+    if (shader_type == context::ShaderType::VERTEX) {
         shader_create_info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
-    } else if (shader_type == context::ShaderType::FRAGMENT)
-    {
+    }
+    else if (shader_type == context::ShaderType::FRAGMENT) {
         shader_create_info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
     }
     shader_create_info.num_uniform_buffers = num_uniform_buffer;
 
     auto shader = SDL_CreateGPUShader(ctx.gpu_device, &shader_create_info);
 
-    if (shader_type == context::ShaderType::VERTEX)
-    {
+    if (shader_type == context::ShaderType::VERTEX) {
         ctx.vertex_shader = shader;
-    } else if (shader_type == context::ShaderType::FRAGMENT)
-    {
+    }
+    else if (shader_type == context::ShaderType::FRAGMENT) {
         ctx.fragment_shader = shader;
     }
 }
 
-inline auto gpu::create_graphic_pipeline(context::ContextGraphic& ctx) -> void
+inline auto gpu::create_graphic_pipeline(context::ContextRender& ctx) -> void
 {
     auto color_target_desc = SDL_GPUColorTargetDescription{};
     color_target_desc.format = SDL_GetGPUSwapchainTextureFormat(ctx.gpu_device, ctx.window);
@@ -291,7 +234,8 @@ inline auto gpu::create_graphic_pipeline(context::ContextGraphic& ctx) -> void
     auto vertex_input_state = SDL_GPUVertexInputState{};
     vertex_input_state.num_vertex_buffers = 1;
     vertex_input_state.vertex_buffer_descriptions = &vertex_buffer_description;
-    vertex_input_state.num_vertex_attributes = (Uint32)LENGTH(vas); /* banyaknya vertex attribute(vas) yg ada hanya 2 */
+    vertex_input_state.num_vertex_attributes =
+        (Uint32)LENGTH(vas); /* banyaknya vertex attribute(vas) yg ada hanya 2 */
     vertex_input_state.vertex_attributes = vas;
 
     auto pipeline_create_info = SDL_GPUGraphicsPipelineCreateInfo{};
@@ -306,3 +250,5 @@ inline auto gpu::create_graphic_pipeline(context::ContextGraphic& ctx) -> void
 }
 
 } // namespace gpu
+
+} // namespace context

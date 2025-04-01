@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.26)
 
 project(
-	pikumarazter
+	bubuk
 	VERSION 1.0.0
-	DESCRIPTION "pikumarazter"
+	DESCRIPTION "bubuk Game Engine | DON'T USE THIS PLEASE"
 	LANGUAGES CXX
 )
 
@@ -20,7 +20,7 @@ if(WIN32)
 endif()
 
 if(MSVC)
-	set(CMAKE_CXX_FLAGS "/Wall /std:c++17 /W4 /sdl /EHsc")
+	set(CMAKE_CXX_FLAGS "/Wall /W4 /sdl /EHsc")
 endif()
 
 if(CMAKE_GNU_COMPILER_ID)
@@ -31,7 +31,11 @@ set(CPP_SOURCES
 		main.cpp
 )
 set(HEADER_SOURCES
-		include/main.h
+		include/main_audio.h
+		include/main_global.h
+		include/main_gui.h
+		include/main_helper.h
+		include/main_render.h
 		include/SDL3/include/SDL3
 		include/glm
 )
@@ -58,13 +62,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES} ${FMO
 # # GLM
 # #######################
 set(glm_DIR ${CMAKE_SOURCE_DIR}/include/glm)
-
-# #######################
-# # Flecs
-# #######################
-# find_package(flecs REQUIRED)
-# target_link_libraries(${PROJECT_NAME} PRIVATE flecs::flecs_static)
-# target_include_directories(${PROJECT_NAME} PRIVATE ${flecs_INCLUDE_DIRS})
 
 # #######################
 # # spdlog
