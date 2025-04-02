@@ -7,9 +7,19 @@ project(
 	LANGUAGES CXX
 )
 
+option(USE_IMGUI "Build with ImGUI support" OFF)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE CACHE BOOL "" FORCE)
 set(CMAKE_CXX_STANDARD 17)
 
+# #######################
+# # GLM
+# #######################
+set(glm_DIR ${CMAKE_SOURCE_DIR}/include/glm)
+
+# #######################
+# # FMOD
+# #######################
 set(FMOD_DIR "${CMAKE_SOURCE_DIR}/include/FMOD")
 set(FMOD_INCLUDE_DIR "${FMOD_DIR}")
 set(FMOD_LIBRARY_DIR "${FMOD_DIR}")
@@ -30,15 +40,50 @@ endif()
 set(CPP_SOURCES
 		main.cpp
 )
+
 set(HEADER_SOURCES
 		include/main_audio.h
 		include/main_global.h
 		include/main_gui.h
 		include/main_helper.h
 		include/main_render.h
-		include/SDL3/include/SDL3
-		include/glm
+
+		include/SDL3/include/SDL3/
+
+		include/glm/
 )
+
+if(USE_IMGUI)
+	add_compile_definitions(USE_IMGUI)
+
+	list(APPEND HEADER_SOURCES
+		include/imgui/
+	)
+
+	list(APPEND CPP_SOURCES
+		include/imgui/imgui_draw.cpp
+		include/imgui/imgui_impl_sdl3.cpp
+		include/imgui/imgui_impl_sdlgpu3.cpp
+		include/imgui/imgui_impl_sdlrenderer3.cpp
+		include/imgui/imgui_stdlib.cpp
+		include/imgui/imgui_tables.cpp
+		include/imgui/imgui_widgets.cpp
+		include/imgui/imgui.cpp
+		include/imgui/imgui_widgets.cpp
+	)
+
+	if(WIN32)
+		list(APPEND CPP_SOURCES
+			include/imgui/imgui_impl_win32.cpp
+		)
+	endif()
+
+	if(ANDROID)
+		list(APPEND CPP_SOURCES
+			include/imgui/imgui_impl_android.cpp
+		)
+	endif()
+endif()
 
 add_subdirectory(include/SDL3 EXCLUDE_FROM_ALL)
 add_subdirectory(include/glm EXCLUDE_FROM_ALL)
@@ -50,18 +95,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/i
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/glm)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/FMOD)
 
+if(USE_IMGUI)
+	target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui)
+endif()
+
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES} ${FMOD_DEBUG_LIBRARY})
-
-# if (WIN32)
-# 	target_link_libraries(
-# 		${PROJECT_NAME} PRIVATE SDL3main
-# 	)
-# endif()
-
-# #######################
-# # GLM
-# #######################
-set(glm_DIR ${CMAKE_SOURCE_DIR}/include/glm)
 
 # #######################
 # # spdlog

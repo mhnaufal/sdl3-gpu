@@ -8,7 +8,7 @@ My attempt to create some sort of "game engine" from _scratch_ by adding librari
 |                       | The Forge Framework |
 | Audio                 | FMOD                |
 | Logging               | ?                   |
-| GUI                   | Noesis              |
+| GUI                   | ImGUI               |
 | 3D Object/Mesh Loader | ?                   |
 | Math                  | GLM                 |
 | Physic                | PhysX               |

@@ -5,6 +5,7 @@
 #pragma once
 
 // bubuk
+#include "imgui/imgui_impl_sdl3.h"
 #include "main_helper.h"
 #include "main_global.h"
 
@@ -74,15 +75,15 @@ namespace gpu {
 auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxglob) -> bool;
 auto destroy_window(context::ContextRender& ctx) -> void;
 auto process_input(context::ContextRender& ctxren, context::ContextGlobal& ctxglob) -> void;
-auto init_gpu_device(context::ContextRender& ctx) -> bool;
-auto init_command_buffer(context::ContextRender& ctx) -> bool;
-auto read_shader_file(const char* path) -> std::vector<Uint8>;
-auto create_gpu_shader(
+auto init_gpu_device_sdl(context::ContextRender& ctx) -> bool;
+auto init_command_buffer_sdl(context::ContextRender& ctx) -> bool;
+auto create_gpu_shader_sdl(
     context::ContextRender& ctx,
     const std::string& path,
     context::ShaderType shader_type,
     Uint32 num_uniform_buffer) -> void;
-auto create_graphic_pipeline(context::ContextRender& ctx) -> void;
+auto create_graphic_pipeline_sdl(context::ContextRender& ctx) -> void;
+auto do_render_pass_sdl(context::ContextRender& ctxren, SDL_GPUBuffer& vertex_buffer, context::UniformBufferObject& ubo) -> void;
 
 /****************************************/
 // Window
@@ -119,6 +120,8 @@ inline auto destroy_window(context::ContextRender& ctx) -> void
 {
     SDL_DestroyTexture(ctx.frame_buffer_texture);
     SDL_DestroyRenderer(ctx.renderer);
+    SDL_ReleaseWindowFromGPUDevice(ctx.gpu_device, ctx.window);
+    // SDL_DestroyGPUDevice(ctx.gpu_device); // TODO: why?
     SDL_DestroyWindow(ctx.window);
     SDL_Quit();
 }
@@ -126,6 +129,10 @@ inline auto destroy_window(context::ContextRender& ctx) -> void
 inline auto process_input(context::ContextRender& ctxren, context::ContextGlobal& ctxglob) -> void
 {
     while (SDL_PollEvent(&ctxren.event)) {
+#ifdef USE_IMGUI
+        ImGui_ImplSDL3_ProcessEvent(&ctxren.event);
+#endif
+
         switch (ctxren.event.type) {
         case SDL_EVENT_QUIT:
             ctxglob.is_playing = false;
@@ -139,7 +146,10 @@ inline auto process_input(context::ContextRender& ctxren, context::ContextGlobal
     }
 }
 
-inline auto init_gpu_device(context::ContextRender& ctx) -> bool
+/****************************************/
+// SDL3
+/****************************************/
+inline auto init_gpu_device_sdl(context::ContextRender& ctx) -> bool
 {
     ctx.gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, nullptr);
     auto ok = SDL_ClaimWindowForGPUDevice(ctx.gpu_device, ctx.window);
@@ -147,7 +157,7 @@ inline auto init_gpu_device(context::ContextRender& ctx) -> bool
     return ok;
 }
 
-inline auto init_command_buffer(context::ContextRender& ctx) -> bool
+inline auto init_command_buffer_sdl(context::ContextRender& ctx) -> bool
 {
     ctx.command_buffer = SDL_AcquireGPUCommandBuffer(ctx.gpu_device);
     auto ok = SDL_WaitAndAcquireGPUSwapchainTexture(
@@ -156,26 +166,13 @@ inline auto init_command_buffer(context::ContextRender& ctx) -> bool
     return ok;
 }
 
-inline auto read_shader_file(const char* path) -> std::vector<Uint8>
-{
-    std::ifstream file(path, std::ios::binary | std::ios::ate);
-
-    std::streamsize size = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    std::vector<Uint8> code(size);
-
-    file.read(reinterpret_cast<char*>(code.data()), size);
-    return code;
-}
-
-inline auto gpu::create_gpu_shader(
+inline auto create_gpu_shader_sdl(
     context::ContextRender& ctx,
     const std::string& path,
     context::ShaderType shader_type,
     Uint32 num_uniform_buffer) -> void
 {
-    auto shader_code = gpu::read_shader_file(path.c_str());
+    auto shader_code = read_shader_file(path.c_str());
     auto shader_create_info = SDL_GPUShaderCreateInfo{};
     shader_create_info.code_size = shader_code.size();
     shader_create_info.code = shader_code.data();
@@ -199,7 +196,7 @@ inline auto gpu::create_gpu_shader(
     }
 }
 
-inline auto gpu::create_graphic_pipeline(context::ContextRender& ctx) -> void
+inline auto create_graphic_pipeline_sdl(context::ContextRender& ctx) -> void
 {
     auto color_target_desc = SDL_GPUColorTargetDescription{};
     color_target_desc.format = SDL_GetGPUSwapchainTextureFormat(ctx.gpu_device, ctx.window);
@@ -248,6 +245,45 @@ inline auto gpu::create_graphic_pipeline(context::ContextRender& ctx) -> void
     auto pipeline = SDL_CreateGPUGraphicsPipeline(ctx.gpu_device, &pipeline_create_info);
     ctx.graphic_pipeline = pipeline;
 }
+
+inline auto do_render_pass_sdl(context::ContextRender& ctxren, SDL_GPUBuffer& vertex_buffer, context::UniformBufferObject& ubo) -> void
+{
+    //* [5] Begin render pass: where we actually doing the rendering, which encoded into Command Buffer
+    auto color_info = SDL_GPUColorTargetInfo{};
+    color_info.texture = ctxren.gpu_texture;
+    color_info.clear_color = SDL_FColor{0.05f, 0.1f, 0.35f, 1.0f};
+    color_info.load_op = SDL_GPULoadOp::SDL_GPU_LOADOP_CLEAR;
+    color_info.store_op = SDL_GPUStoreOp::SDL_GPU_STOREOP_STORE;
+    color_info.mip_level = 0;
+    color_info.layer_or_depth_plane = 0;
+    color_info.cycle = false;
+    auto render_pass = SDL_BeginGPURenderPass(ctxren.command_buffer, &color_info, 1, nullptr);
+
+    //* [6] Draw
+        // - Bind pipeline
+        SDL_BindGPUGraphicsPipeline(render_pass, ctxren.graphic_pipeline);
+
+        // - Bind vertex buffer/data & Bind unform buffer/data
+        auto gpu_buffer_binding = SDL_GPUBufferBinding{};
+        gpu_buffer_binding.buffer = &vertex_buffer;
+        SDL_BindGPUVertexBuffers(render_pass, 0, &gpu_buffer_binding, 1);
+
+        SDL_PushGPUVertexUniformData(
+            ctxren.command_buffer,
+            0, // bindings
+            &ubo,
+            sizeof(ubo));
+
+        // - draw calls
+        SDL_DrawGPUPrimitives(render_pass, 3, 1, 0, 0);
+
+    //* [7] End render pass
+    SDL_EndGPURenderPass(render_pass);
+}
+
+/****************************************/
+// Forge
+/****************************************/
 
 } // namespace gpu
 
