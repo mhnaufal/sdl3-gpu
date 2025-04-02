@@ -8,8 +8,7 @@
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/include/SDL3/include/SDL3/**",
                 "${workspaceFolder}/include/SDL3/include/SDL3/",
-                "${workspaceFolder}/include/FMOD/**",
-                "${workspaceFolder}/include/Noesis/**"
+                "${workspaceFolder}/include/FMOD/**"
             ],
             "defines": [
                 "_DEBUG",

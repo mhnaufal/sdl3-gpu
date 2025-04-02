@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include "tiny_fiber.h"
-
 namespace context {
 struct ContextGlobal {
     bool is_playing{false};
