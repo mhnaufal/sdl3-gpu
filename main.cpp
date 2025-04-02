@@ -1,12 +1,20 @@
 // NOT A PROJECT TO BE TAKEN SERIOUSLY
 
+#include "include/Noesis/NsCore/ArrayRef.h"
 #include "include/main_render.h"
 #include "include/main_audio.h"
 #include "include/main_global.h"
 #include "include/main_helper.h"
+#include "include/main_gui.h"
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 {
+    auto e = NoesisApp::EmbeddedXaml{};
+    auto a = Noesis::ArrayRef<NoesisApp::EmbeddedXaml>(e);
+    Noesis::GUI::Init();
+    Noesis::Ptr<NoesisApp::EmbeddedXamlProvider> xamlProvider(Noesis::MakePtr<NoesisApp::EmbeddedXamlProvider>(a));
+    Noesis::GUI::SetXamlProvider(xamlProvider);
+
     context::ContextAudio ctxaud{};
     context::ContextRender ctxren{};
     context::ContextGlobal ctxglob{};

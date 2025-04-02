@@ -10,6 +10,14 @@ project(
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE CACHE BOOL "" FORCE)
 set(CMAKE_CXX_STANDARD 17)
 
+# #######################
+# # GLM
+# #######################
+set(glm_DIR ${CMAKE_SOURCE_DIR}/include/glm)
+
+# #######################
+# # FMOD
+# #######################
 set(FMOD_DIR "${CMAKE_SOURCE_DIR}/include/FMOD")
 set(FMOD_INCLUDE_DIR "${FMOD_DIR}")
 set(FMOD_LIBRARY_DIR "${FMOD_DIR}")
@@ -18,6 +26,13 @@ if(WIN32)
 	set(FMOD_LIBRARY "${FMOD_LIBRARY_DIR}/fmod_vc.lib")
     set(FMOD_DEBUG_LIBRARY "${FMOD_LIBRARY_DIR}/fmodL_vc.lib")
 endif()
+
+# #######################
+# # Noesis
+# #######################
+set(Noesis_DIR "${CMAKE_SOURCE_DIR}/include/Noesis")
+set(Noesis_INCLUDE_DIR "${Noesis_DIR}")
+set(Noesis_LIBRARY_DIR "${Noesis_DIR}")
 
 if(MSVC)
 	set(CMAKE_CXX_FLAGS "/Wall /W4 /sdl /EHsc")
@@ -40,6 +55,9 @@ set(HEADER_SOURCES
 		include/glm
 )
 
+# #######################
+# # SDL3 & GLM (cmake)
+# #######################
 add_subdirectory(include/SDL3 EXCLUDE_FROM_ALL)
 add_subdirectory(include/glm EXCLUDE_FROM_ALL)
 
@@ -49,19 +67,19 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/in
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/SDL3/include/SDL3/)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/glm)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/FMOD)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/Noesis)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES} ${FMOD_DEBUG_LIBRARY})
+target_link_libraries(${PROJECT_NAME} PRIVATE 
+	SDL3::SDL3 ${SDL3_LIBRARIES} 
+	${FMOD_DEBUG_LIBRARY} 
+	${Noesis_DIR}/Noesis.lib ${Noesis_DIR}/NoesisApp.lib
+)
 
 # if (WIN32)
 # 	target_link_libraries(
 # 		${PROJECT_NAME} PRIVATE SDL3main
 # 	)
 # endif()
-
-# #######################
-# # GLM
-# #######################
-set(glm_DIR ${CMAKE_SOURCE_DIR}/include/glm)
 
 # #######################
 # # spdlog
@@ -97,3 +115,8 @@ if(WIN32)
 endif()
 
 file(COPY resource/ DESTINATION ${CMAKE_BINARY_DIR}/resource)
+
+file(COPY resource/MainWindow.xaml DESTINATION ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
+
+file(GLOB NOESIS_DLLS ${Noesis_DIR}/Noesis.dll ${Noesis_DIR}/NoesisApp.dll)
+file(COPY ${NOESIS_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
