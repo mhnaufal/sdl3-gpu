@@ -6,6 +6,13 @@
 
 #pragma once
 
+#if defined(WIN32) || defined(_WIN32)
+    constexpr const char* PLATFORM_NAME = "WINDOWS";
+#elif defined(ANDROID)
+    #include <android/log.h>
+    constexpr const char* PLATFORM_NAME = "ANDROID";
+#endif
+
 namespace context {
 struct ContextGlobal {
     bool is_playing{false};

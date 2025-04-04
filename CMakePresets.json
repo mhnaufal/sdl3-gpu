@@ -2,27 +2,41 @@
     "version": 8,
     "configurePresets": [
         {
-            "name": "build",
-            "displayName": "debug-sln",
-            "description": "Sets Ninja generator, build and install directory",
+            "name": "win-debug",
+            "displayName": "win-debug",
+            "description": "WINDOWS DEBUG X64",
             "generator": "Visual Studio 17 2022",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "binaryDir": "${sourceDir}/out/${presetName}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_TOOLCHAIN_FILE": "",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+            },
+            "architecture": {
+                "value": "x64"
             }
         },
         {
-            "name": "debug-ninja",
-            "displayName": "debug-ninja",
-            "description": "Sets Ninja generator, build and install directory",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "name": "win-release",
+            "displayName": "win-release",
+            "description": "WINDOWS RELEASE X64",
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/out/${presetName}",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_TOOLCHAIN_FILE": "",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+            },
+            "architecture": {
+                "value": "x64"
+            }
+        },
+        {
+            "name": "python-controlled",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "$env{BUILD_TYPE}",
+                "CMAKE_INSTALL_PREFIX": "$env{INSTALL_DIR}"
             }
         }
     ]

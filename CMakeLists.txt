@@ -7,10 +7,50 @@ project(
 	LANGUAGES CXX
 )
 
-option(USE_IMGUI "Build with ImGUI support" OFF)
+# Set default build type if not specified
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose Your Build Type [Release/Debug]" FORCE)
+endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE CACHE BOOL "" FORCE)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED)
+
+option(USE_IMGUI "Build with ImGUI support" OFF)
+
+# Platform detection
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+	set(WINDOWS TRUE)
+	add_definitions(-DWIN32 -D_WINDOWS)
+	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+		add_definitions(-D_WIN64)
+	endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+	set(ANDROID TRUE)
+	add_definitions(-DANDROID)
+endif()
+
+# Arch detection
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+	add_definitions(-DARCH_64BIT)
+else()
+	add_definitions(-DARCH_32BIT)
+endif()
+
+# Configuration-specific settings
+string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_UPPER)
+add_definitions(-DBUILD_TYPE_${BUILD_TYPE_UPPER})
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-DDEBUG -D_DEBUG)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_definitions(-DNDEBUG)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+    if(WINDOWS)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG:FULL /OPT:REF /OPT:ICF")
+    endif()
+endif()
 
 # #######################
 # # GLM
@@ -22,15 +62,28 @@ set(glm_DIR ${CMAKE_SOURCE_DIR}/include/glm)
 # #######################
 set(FMOD_DIR "${CMAKE_SOURCE_DIR}/include/FMOD")
 set(FMOD_INCLUDE_DIR "${FMOD_DIR}")
-set(FMOD_LIBRARY_DIR "${FMOD_DIR}")
 
-if(WIN32)
+if(WINDOWS)
+	set(FMOD_LIBRARY_DIR "${FMOD_DIR}/lib/win")
 	set(FMOD_LIBRARY "${FMOD_LIBRARY_DIR}/fmod_vc.lib")
     set(FMOD_DEBUG_LIBRARY "${FMOD_LIBRARY_DIR}/fmodL_vc.lib")
+    set(FMOD_RELEASE_LIBRARY "${FMOD_LIBRARY_DIR}/fmod_vc.lib")
+    set(FMOD_DEBUG_DLL "${FMOD_LIBRARY_DIR}/fmodL.dll")
+    set(FMOD_RELEASE_DLL "${FMOD_LIBRARY_DIR}/fmod.dll")
+elseif(ANDROID)
+	find_library(log-lib log)
+	set(FMOD_LIBRARY_DIR "${FMOD_DIR}/lib/android")
+	set(FMOD_LIBRARY "${FMOD_LIBRARY_DIR}/fmod_vc.lib")
+    set(FMOD_DEBUG_LIBRARY "${FMOD_LIBRARY_DIR}/fmodL_vc.lib")
+    set(FMOD_RELEASE_LIBRARY "${FMOD_LIBRARY_DIR}/fmod_vc.lib")
 endif()
 
 if(MSVC)
-	set(CMAKE_CXX_FLAGS "/Wall /W4 /sdl /EHsc")
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+		set(CMAKE_CXX_FLAGS "/Wall /W4 /sdl /EHsc /std:c++17 /MTd /analyze:quiet /O2")
+	else()
+		set(CMAKE_CXX_FLAGS "/Wall /W4 /sdl /EHsc /Qpar /std:c++17 /MT /analyze:quiet /Od")
+	endif()
 endif()
 
 if(CMAKE_GNU_COMPILER_ID)
@@ -72,13 +125,11 @@ if(USE_IMGUI)
 		include/imgui/imgui_widgets.cpp
 	)
 
-	if(WIN32)
+	if(WINDOWS)
 		list(APPEND CPP_SOURCES
 			include/imgui/imgui_impl_win32.cpp
 		)
-	endif()
-
-	if(ANDROID)
+	elseif(ANDROID)
 		list(APPEND CPP_SOURCES
 			include/imgui/imgui_impl_android.cpp
 		)
@@ -99,7 +150,25 @@ if(USE_IMGUI)
 	target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES} ${FMOD_DEBUG_LIBRARY})
+if(WINDOWS)
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        target_link_directories(${PROJECT_NAME} PUBLIC ${FMOD_DIR}/core/lib/x64/debug)
+    else()
+        target_link_directories(${PROJECT_NAME} PUBLIC ${FMOD_DIR}/core/lib/x64/release)
+    endif()
+elseif(ANDROID)
+	find_library(log-lib log)
+endif()
+
+if(WINDOWS)
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+		target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES} ${FMOD_DEBUG_LIBRARY})
+	else()
+		target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES} ${FMOD_RELEASE_LIBRARY})
+	endif()
+elseif(ANDROID)
+	target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES} ${FMOD_DEBUG_LIBRARY} ${log-lib})
+endif()
 
 # #######################
 # # spdlog
@@ -109,14 +178,23 @@ target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES} ${FMO
 # target_include_directories(${PROJECT_NAME} PRIVATE ${spdlog_INCLUDE_DIRS})
 # add_compile_definitions(SPDLOG_FMT_EXTERNAL)
 
-#######################
-# MSVC
-#######################
 if(MSVC)
 	target_link_libraries(${PROJECT_NAME} PRIVATE wsock32 ws2_32)
 endif()
 
-if(WIN32)
+# Installation configuration
+if(WINDOWS)
+    install(TARGETS ${PROJECT_NAME}
+        CONFIGURATIONS Release
+        RUNTIME DESTINATION bin/Release
+    )
+    install(TARGETS ${PROJECT_NAME}
+        CONFIGURATIONS Debug
+        RUNTIME DESTINATION bin/Debug
+    )
+endif()
+
+if(WINDOWS)
 	add_custom_command(
 		TARGET ${PROJECT_NAME} POST_BUILD COMMAND
 		${CMAKE_COMMAND} -E copy_if_different
@@ -125,13 +203,24 @@ if(WIN32)
 			VERBATIM
 	)
 
-	add_custom_command(
-		TARGET ${PROJECT_NAME} POST_BUILD COMMAND
-		${CMAKE_COMMAND} -E copy_if_different
-			"${FMOD_DIR}/fmodL.dll"
-			$<TARGET_FILE_DIR:${PROJECT_NAME}>
-			VERBATIM
-	)
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+		add_custom_command(
+			TARGET ${PROJECT_NAME} POST_BUILD COMMAND
+			${CMAKE_COMMAND} -E copy_if_different
+				${FMOD_DEBUG_DLL}
+				$<TARGET_FILE_DIR:${PROJECT_NAME}>
+				VERBATIM
+		)
+	else()
+		add_custom_command(
+			TARGET ${PROJECT_NAME} POST_BUILD COMMAND
+			${CMAKE_COMMAND} -E copy_if_different
+				${FMOD_RELEASE_DLL}
+				$<TARGET_FILE_DIR:${PROJECT_NAME}>
+				VERBATIM
+		)
+	endif()
 endif()
 
-file(COPY resource/ DESTINATION ${CMAKE_BINARY_DIR}/resource)
+file(COPY resource/ DESTINATION ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/resource)
+file(COPY shaders/ DESTINATION ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/shaders)

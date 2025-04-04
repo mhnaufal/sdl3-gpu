@@ -8,6 +8,8 @@
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 {
+    printf("####################\n### %s ###\n####################\n\n", PLATFORM_NAME);
+
     context::ContextAudio ctxaud{};
     context::ContextRender ctxren{};
     context::ContextGlobal ctxglob{};
@@ -80,8 +82,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
     /* 
     ! "1" Because UBO exists inside vertex_glsl, but not fragment_glsl
     */
-    context::gpu::create_gpu_shader_sdl(ctxren, std::string{"../../../../shaders/shader.spv.vert"}, context::ShaderType::VERTEX, 1);
-    context::gpu::create_gpu_shader_sdl(ctxren, std::string{"../../../../shaders/shader.spv.frag"}, context::ShaderType::FRAGMENT, 0);
+    context::gpu::create_gpu_shader_sdl(ctxren, std::string{"./shaders/shader.spv.vert"}, context::ShaderType::VERTEX, 1);
+    context::gpu::create_gpu_shader_sdl(ctxren, std::string{"./shaders/shader.spv.frag"}, context::ShaderType::FRAGMENT, 0);
 
     context::gpu::create_graphic_pipeline_sdl(ctxren);
     SDL_ReleaseGPUShader(ctxren.gpu_device, ctxren.vertex_shader);
@@ -105,7 +107,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
     ctxglob.last_tick = SDL_GetTicks();
 
     if (ctxglob.is_playing && ok && ok2) {
-        ctxaud.PlayMusic("../resource/middleast.mp3");
+        ctxaud.PlayMusic("./resource/middleast.mp3");
     }
 
     while (ctxglob.is_playing && ok && ok2) {

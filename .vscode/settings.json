@@ -1,4 +1,18 @@
 {
+    "cmake.configureOnOpen": false,
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.installPrefix": "${workspaceFolder}/install",
+    "cmake.generator": "Visual Studio 17 2022",
+    "cmake.buildBeforeRun": false,
+    "cmake.useCMakePresets": "auto",  // or "never" to ignore presets
+    "cmake.configureSettings": {
+        "CMAKE_BUILD_TYPE": "Release", // Ganti di sini "Debug" or "Release"
+    },
+    "cmake.buildArgs": [
+        "--config ${buildType}",
+    ],
+    "cmake.parallelJobs": 8,
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "files.associations": {
         "xlocale": "c",
         "iosfwd": "cpp",

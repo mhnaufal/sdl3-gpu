@@ -12,6 +12,7 @@ My attempt to create some sort of "game engine" from _scratch_ by adding librari
 | 3D Object/Mesh Loader | ?                   |
 | Math                  | GLM                 |
 | Physic                | PhysX               |
+| Skeletal Animation    | ?                   |
 
 ## Tutorial
 
