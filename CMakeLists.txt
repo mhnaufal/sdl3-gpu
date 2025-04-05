@@ -62,7 +62,6 @@ set(glm_DIR ${CMAKE_SOURCE_DIR}/include/glm)
 # #######################
 set(FMOD_DIR "${CMAKE_SOURCE_DIR}/include/FMOD")
 set(FMOD_INCLUDE_DIR "${FMOD_DIR}")
-
 if(WINDOWS)
 	set(FMOD_LIBRARY_DIR "${FMOD_DIR}/lib/win")
 	set(FMOD_LIBRARY "${FMOD_LIBRARY_DIR}/fmod_vc.lib")
@@ -77,6 +76,13 @@ elseif(ANDROID)
     set(FMOD_DEBUG_LIBRARY "${FMOD_LIBRARY_DIR}/fmodL_vc.lib")
     set(FMOD_RELEASE_LIBRARY "${FMOD_LIBRARY_DIR}/fmod_vc.lib")
 endif()
+
+# #######################
+# # PhysX
+# #######################
+set(PHYSX_DIR "${CMAKE_SOURCE_DIR}/include/physx")
+set(PHYSX_INCLUDE_DIR "${PHYSX_DIR}/include")
+set(PHYSX_LIBRARY_DIR "${PHYSX_DIR}/lib")
 
 if(MSVC)
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -142,9 +148,10 @@ add_subdirectory(include/glm EXCLUDE_FROM_ALL)
 add_executable(${PROJECT_NAME} ${HEADER_SOURCES} ${CPP_SOURCES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/SDL3/include/SDL3/)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/SDL3/include/SDL3/)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/glm)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/FMOD)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/physx/include)
 
 if(USE_IMGUI)
 	target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui)
@@ -162,13 +169,31 @@ endif()
 
 if(WINDOWS)
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-		target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES} ${FMOD_DEBUG_LIBRARY})
+		target_link_libraries(${PROJECT_NAME} PRIVATE 
+			SDL3::SDL3 ${SDL3_LIBRARIES} 
+			${FMOD_DEBUG_LIBRARY}
+		)
 	else()
-		target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES} ${FMOD_RELEASE_LIBRARY})
+		target_link_libraries(${PROJECT_NAME} PRIVATE 
+			SDL3::SDL3 ${SDL3_LIBRARIES} 
+			${FMOD_RELEASE_LIBRARY}
+		)
 	endif()
 elseif(ANDROID)
-	target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 ${SDL3_LIBRARIES} ${FMOD_DEBUG_LIBRARY} ${log-lib})
+	target_link_libraries(${PROJECT_NAME} PRIVATE 
+		SDL3::SDL3 ${SDL3_LIBRARIES} 
+		${FMOD_DEBUG_LIBRARY} 
+		${log-lib}
+	)
 endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+	${PHYSX_LIBRARY_DIR}/PhysX_64.lib
+	${PHYSX_LIBRARY_DIR}/PhysXExtensions_static_64.lib
+	${PHYSX_LIBRARY_DIR}/PhysXPvdSDK_static_64.lib
+	${PHYSX_LIBRARY_DIR}/PhysXCommon_64.lib
+	${PHYSX_LIBRARY_DIR}/PhysXFoundation_64.lib
+)
 
 # #######################
 # # spdlog
@@ -201,6 +226,7 @@ if(WINDOWS)
 			$<TARGET_FILE:SDL3::SDL3>
 			$<TARGET_FILE_DIR:${PROJECT_NAME}>
 			VERBATIM
+			COMMENT "Copy all SDL3 DLLs to executable directory\n"
 	)
 
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -210,6 +236,7 @@ if(WINDOWS)
 				${FMOD_DEBUG_DLL}
 				$<TARGET_FILE_DIR:${PROJECT_NAME}>
 				VERBATIM
+				COMMENT "Copy all FMOD DLLs Debug to executable directory\n"
 		)
 	else()
 		add_custom_command(
@@ -218,9 +245,20 @@ if(WINDOWS)
 				${FMOD_RELEASE_DLL}
 				$<TARGET_FILE_DIR:${PROJECT_NAME}>
 				VERBATIM
+				COMMENT "Copy all FMOD DLLs Release to executable directory\n"
 		)
 	endif()
+
+	file(GLOB PHYSX_DLLS "${PHYSX_DIR}/lib/*")
+	add_custom_target(copy_physx_dlls ALL
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			${PHYSX_DLLS}
+			$<TARGET_FILE_DIR:${PROJECT_NAME}>
+			COMMENT "Copy all PhysX DLLs to executable directory\n"
+	)
 endif()
 
 file(COPY resource/ DESTINATION ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/resource)
 file(COPY shaders/ DESTINATION ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/shaders)
+
+add_dependencies(${PROJECT_NAME} copy_physx_dlls)

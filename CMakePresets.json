@@ -32,6 +32,39 @@
             }
         },
         {
+            "name": "win-imgui",
+            "displayName": "win-imgui",
+            "description": "WINDOWS IMGUI X64",
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/out/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_TOOLCHAIN_FILE": "",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "USE_IMGUI": "ON"
+            },
+            "architecture": {
+                "value": "x64"
+            }
+        },
+        {
+            "name": "android-debug",
+            "displayName": "android-debug",
+            "description": "ANDROID DEBUG X64",
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/out/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_TOOLCHAIN_FILE": "C:/Users/LENOVO/AppData/Local/Android/Sdk/ndk-bundle/build/cmake/android.toolchain.cmake",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "ANDROID_ABI": "arm64-v8a",
+                "ANDROID_PLATFORM": "android-24"
+            },
+            "architecture": {
+                "value": "x64"
+            }
+        },
+        {
             "name": "python-controlled",
             "hidden": true,
             "cacheVariables": {

@@ -180,3 +180,7 @@ _deps
 
 venv/
 CMakeUserPresets.json
+
+!include/physx/lib/*
+!include/FMOD/lib/win/*
+!include/FMOD/lib/android/*

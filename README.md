@@ -2,17 +2,25 @@
 
 My attempt to create some sort of "game engine" from _scratch_ by adding libraries that already exist out there.
 
-| Category              | Tools               |
-| --------------------- | ------------------- |
-| Rendering             | SDL3                |
-|                       | The Forge Framework |
-| Audio                 | FMOD                |
-| Logging               | ?                   |
-| GUI                   | ImGUI               |
-| 3D Object/Mesh Loader | ?                   |
-| Math                  | GLM                 |
-| Physic                | PhysX               |
-| Skeletal Animation    | ?                   |
+| Category              | Tools                                                                           |
+| --------------------- | ------------------------------------------------------------------------------- |
+| Rendering             | [SDL3](https://wiki.libsdl.org/SDL3/FrontPage)                                  |
+|                       | [The Forge Framework](https://github.com/ConfettiFX/The-Forge/wiki/)            |
+|                       | [NVRHI](https://github.com/NVIDIA-RTX/NVRHI)                                    |
+| Audio                 | [FMOD](https://www.fmod.com/docs/2.03/api/white-papers.html)                    |
+| Logging               | ?                                                                               |
+| GUI                   | [Dear ImGUI](https://github.com/ocornut/imgui)                                  |
+| 3D Object/Mesh Loader | ?                                                                               |
+| Math                  | [GLM](https://www.fmod.com/docs/2.03/api/white-papers.html)                     |
+| Physic                | [PhysX](https://nvidia-omniverse.github.io/PhysX/physx/5.6.0/docs/Startup.html) |
+| Skeletal Animation    | [Ozz](http://guillaumeblanc.github.io/ozz-animation/documentation)              |
+
+## Documentations
+First checkpoint achieved. Able to include most of the dependencies to the project and build & run on Windows x64.
+
+Next target would be build & run on Android.
+
+<img src="./docs/checkpoint1.gif" width="400" height="300" />
 
 ## Tutorial
 

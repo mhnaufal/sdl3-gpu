@@ -96,7 +96,7 @@ auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxgl
     }
 
     ctxren.window = SDL_CreateWindow(
-        "SDL 3 GPU Vulkan",
+        "Bubuk Engine",
         ctxglob.window_width,
         ctxglob.window_height,
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);

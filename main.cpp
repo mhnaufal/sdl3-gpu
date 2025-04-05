@@ -5,10 +5,13 @@
 #include "include/main_global.h"
 #include "include/main_helper.h"
 #include "include/main_gui.h"
+#include "include/main_physic.h"
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 {
     printf("####################\n### %s ###\n####################\n\n", PLATFORM_NAME);
+
+    context::ContextPhysic ctxphy{};
 
     context::ContextAudio ctxaud{};
     context::ContextRender ctxren{};

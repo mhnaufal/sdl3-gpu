@@ -55,29 +55,33 @@ public:
         ImGui::NewFrame();
     }
 
-    auto draw_imgui_gui(DrawData& dd) -> void
+    auto draw_imgui_gui(DrawData& dd, [[maybe_unused]] SDL_Texture* texture = nullptr) -> void
     {
         static float f = 0.0f;
         static int counter = 0;
 
-        ImGui::Begin("Bubuk ENGINE");
+        ImGui::Begin("Bubuk Engine");
+            ImGui::Text("Coba delete draw call di sini!");
 
-        ImGui::Text("Coba delete draw call di sini!");
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+            ImGui::ColorEdit4("clear color", (float*)&dd.clear_color);
 
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-        ImGui::ColorEdit4("clear color", (float*)&dd.clear_color);
+            if (ImGui::Button("Button")) {
+                counter++;
+            }
 
-        if (ImGui::Button("Button")) {
-            counter++;
-        }
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
 
-        ImGui::SameLine();
-        ImGui::Text("counter = %d", counter);
+            ImGui::Text(
+                "Application average %.3f ms/frame (%.1f FPS)",
+                1000.0f / m_io.Framerate,
+                m_io.Framerate);
 
-        ImGui::Text(
-            "Application average %.3f ms/frame (%.1f FPS)",
-            1000.0f / m_io.Framerate,
-            m_io.Framerate);
+        ImGui::End();
+
+        ImGui::Begin("SDL Texture");
+            // ImGui::Image((ImTextureID)texture, ImVec2(300, 300));
         ImGui::End();
 
         ImGui::Render();
