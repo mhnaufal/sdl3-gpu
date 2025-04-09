@@ -11,8 +11,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 {
     printf("####################\n### %s ###\n####################\n\n", PLATFORM_NAME);
 
-    context::ContextPhysic ctxphy{};
-
     context::ContextAudio ctxaud{};
     context::ContextRender ctxren{};
     context::ContextGlobal ctxglob{};
@@ -21,6 +19,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 
     ctxglob.is_playing = context::gpu::create_window(ctxren, ctxglob);
     auto ok = context::gpu::init_gpu_device_sdl(ctxren);
+
+    context::ContextPhysic ctxphy{};
+    auto a = ctxphy.pvd;
 
     /* Using Vertex Buffer: 
     ? Dengan ini kita bisa spesify data vertices yg ingin kita gambar lewat C++ instead of dari shader.

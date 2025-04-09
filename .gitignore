@@ -181,6 +181,9 @@ _deps
 venv/
 CMakeUserPresets.json
 
-!include/physx/lib/*
+!include/physx/lib/debug/*
+!include/physx/lib/release/*
 !include/FMOD/lib/win/*
 !include/FMOD/lib/android/*
+!include/nvrhi/lib/debug/*
+!include/nvrhi/lib/release/*

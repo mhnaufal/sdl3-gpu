@@ -82,7 +82,16 @@ endif()
 # #######################
 set(PHYSX_DIR "${CMAKE_SOURCE_DIR}/include/physx")
 set(PHYSX_INCLUDE_DIR "${PHYSX_DIR}/include")
-set(PHYSX_LIBRARY_DIR "${PHYSX_DIR}/lib")
+set(PHYSX_DEBUG_LIBRARY_DIR "${PHYSX_DIR}/lib/debug")
+set(PHYSX_RELEASE_LIBRARY_DIR "${PHYSX_DIR}/lib/release")
+
+# #######################
+# # NVRHI
+# #######################
+set(NVRHI_DIR "${CMAKE_SOURCE_DIR}/include/nvrhi")
+set(NVRHI_INCLUDE_DIR "${NVRHI_DIR}/include")
+set(NVRHI_DEBUG_LIBRARY_DIR "${NVRHI_DIR}/lib/debug")
+set(NVRHI_RELEASE_LIBRARY_DIR "${NVRHI_DIR}/lib/release")
 
 if(MSVC)
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -110,6 +119,8 @@ set(HEADER_SOURCES
 		include/SDL3/include/SDL3/
 
 		include/glm/
+
+		include/nvrhi/
 )
 
 if(USE_IMGUI)
@@ -151,7 +162,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/in
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/SDL3/include/SDL3/)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/glm)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/FMOD)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/physx/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${PHYSX_INCLUDE_DIR})
+target_include_directories(${PROJECT_NAME} PUBLIC ${NVRHI_INCLUDE_DIR})
 
 if(USE_IMGUI)
 	target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui)
@@ -172,11 +184,13 @@ if(WINDOWS)
 		target_link_libraries(${PROJECT_NAME} PRIVATE 
 			SDL3::SDL3 ${SDL3_LIBRARIES} 
 			${FMOD_DEBUG_LIBRARY}
+			${NVRHI_DEBUG_LIBRARY_DIR}/nvrhi.lib
 		)
 	else()
 		target_link_libraries(${PROJECT_NAME} PRIVATE 
 			SDL3::SDL3 ${SDL3_LIBRARIES} 
 			${FMOD_RELEASE_LIBRARY}
+			${NVRHI_RELEASE_LIBRARY_DIR}/nvrhi.lib
 		)
 	endif()
 elseif(ANDROID)
@@ -187,13 +201,23 @@ elseif(ANDROID)
 	)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-	${PHYSX_LIBRARY_DIR}/PhysX_64.lib
-	${PHYSX_LIBRARY_DIR}/PhysXExtensions_static_64.lib
-	${PHYSX_LIBRARY_DIR}/PhysXPvdSDK_static_64.lib
-	${PHYSX_LIBRARY_DIR}/PhysXCommon_64.lib
-	${PHYSX_LIBRARY_DIR}/PhysXFoundation_64.lib
-)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	target_link_libraries(${PROJECT_NAME} PRIVATE
+		${PHYSX_DEBUG_LIBRARY_DIR}/PhysX_64.lib
+		${PHYSX_DEBUG_LIBRARY_DIR}/PhysXExtensions_static_64.lib
+		${PHYSX_DEBUG_LIBRARY_DIR}/PhysXPvdSDK_static_64.lib
+		${PHYSX_DEBUG_LIBRARY_DIR}/PhysXCommon_64.lib
+		${PHYSX_DEBUG_LIBRARY_DIR}/PhysXFoundation_64.lib
+	)
+else()
+	target_link_libraries(${PROJECT_NAME} PRIVATE
+		${PHYSX_RELEASE_LIBRARY_DIR}/PhysX_64.lib
+		${PHYSX_RELEASE_LIBRARY_DIR}/PhysXExtensions_static_64.lib
+		${PHYSX_RELEASE_LIBRARY_DIR}/PhysXPvdSDK_static_64.lib
+		${PHYSX_RELEASE_LIBRARY_DIR}/PhysXCommon_64.lib
+		${PHYSX_RELEASE_LIBRARY_DIR}/PhysXFoundation_64.lib
+	)
+endif()
 
 # #######################
 # # spdlog

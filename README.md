@@ -35,3 +35,13 @@ Next target would be build & run on Android.
 
 1. Minimum Vulkan version is `1.4.309`
 2. Issue in previous Vulkan version: [issue](https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/7258)
+
+---
+
+### Resources 🐤
+
+1. https://github.com/ocornut/imgui/blob/master/examples/example_sdl3_sdlgpu3/main.cpp
+2. https://nvidia-omniverse.github.io/PhysX/physx/5.6.0/docs/Startup.html
+3. https://wiki.libsdl.org/SDL3/Android
+4. https://www.fmod.com/docs/2.01/api/platforms-android.html
+5. https://github.com/android/ndk/wiki/Unsupported-Downloads
