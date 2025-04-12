@@ -11,6 +11,10 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 {
     printf("####################\n### %s ###\n####################\n\n", PLATFORM_NAME);
 
+    SDL_SetLogPriority(SDL_LOG_CATEGORY_VIDEO, SDL_LOG_PRIORITY_DEBUG);
+    SDL_SetLogPriority(SDL_LOG_CATEGORY_GPU, SDL_LOG_PRIORITY_DEBUG);
+    SDL_SetHint(SDL_HINT_VIDEO_FORCE_EGL, "0");  // Avoid EGL conflicts
+
     context::ContextAudio ctxaud{};
     context::ContextRender ctxren{};
     context::ContextGlobal ctxglob{};
@@ -18,10 +22,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
     ctxglob.window_height = 720;
 
     ctxglob.is_playing = context::gpu::create_window(ctxren, ctxglob);
-    auto ok = context::gpu::init_gpu_device_sdl(ctxren);
 
     context::ContextPhysic ctxphy{};
-    auto a = ctxphy.pvd;
 
     /* Using Vertex Buffer: 
     ? Dengan ini kita bisa spesify data vertices yg ingin kita gambar lewat C++ instead of dari shader.
@@ -110,11 +112,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
     ctxren.rotation_rad = glm::radians(-45.0f);
     ctxglob.last_tick = SDL_GetTicks();
 
-    if (ctxglob.is_playing && ok && ok2) {
+    if (ctxglob.is_playing && ok2) {
         ctxaud.PlayMusic("./resource/middleast.mp3");
     }
 
-    while (ctxglob.is_playing && ok && ok2) {
+    while (ctxglob.is_playing && ok2) {
         //? FMOD AUDIO
         ctxaud.UpdateMusic();
 

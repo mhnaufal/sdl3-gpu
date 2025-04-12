@@ -3,6 +3,7 @@
 // The Forge (https://github.com/ConfettiFX/The-Forge/wiki/)
 
 #pragma once
+#define VK_USE_PLATFORM_WIN32_KHR
 
 // bubuk
 #include "imgui/imgui_impl_sdl3.h"
@@ -11,7 +12,6 @@
 
 // SDL
 #include "SDL3/include/SDL3/SDL.h"
-#include "SDL3/include/SDL3/SDL_error.h"
 #include "SDL3/include/SDL3/SDL_events.h"
 #include "SDL3/include/SDL3/SDL_gpu.h"
 #include "SDL3/include/SDL3/SDL_pixels.h"
@@ -19,6 +19,8 @@
 #include "SDL3/include/SDL3/SDL_time.h"
 #include "SDL3/include/SDL3/SDL_timer.h"
 #include "SDL3/include/SDL3/SDL_video.h"
+#include "SDL3/include/SDL3/SDL_log.h"
+#include "SDL3/include/SDL3/SDL_hints.h"
 
 // STD
 #include <array>
@@ -86,7 +88,7 @@ auto create_graphic_pipeline_sdl(context::ContextRender& ctx) -> void;
 auto do_render_pass_sdl(context::ContextRender& ctxren, SDL_GPUBuffer& vertex_buffer, context::UniformBufferObject& ubo) -> void;
 
 /****************************************/
-// Window
+// Window & Renderer
 /****************************************/
 auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxglob) -> bool
 {
@@ -102,6 +104,12 @@ auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxgl
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
     SDL_CHECK_ERROR(ctxren, "Failed to create Window", false);
 
+    //* Latest NVDIA problem
+    //* https://forums.developer.nvidia.com/t/crash-when-creating-vulkan-swapchain-with-driver-545-on-wayland/284574
+    //* Need to be called inside HERE!
+    auto ok = init_gpu_device_sdl(ctxren);
+    SDL_CHECK_ERROR(ctxren, "Failed to initialize GPU device to be used", false);
+
     ctxren.renderer = SDL_CreateRenderer(ctxren.window, nullptr);
     SDL_CHECK_ERROR(ctxren, "Failed to create Renderer", false);
 
@@ -113,7 +121,7 @@ auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxgl
         ctxglob.window_height);
     SDL_CHECK_ERROR(ctxren, "Failed to create Frame Buffer Texture", false);
 
-    return true;
+    return ok;
 }
 
 inline auto destroy_window(context::ContextRender& ctx) -> void
@@ -151,7 +159,13 @@ inline auto process_input(context::ContextRender& ctxren, context::ContextGlobal
 /****************************************/
 inline auto init_gpu_device_sdl(context::ContextRender& ctx) -> bool
 {
-    ctx.gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, nullptr);
+    int device_count = SDL_GetNumGPUDrivers();
+    for (int i = 0; i < device_count; i++) {
+        const char* name = SDL_GetGPUDriver(i);
+        printf("[DEBUG] GPU Driver %d: %s\n", i, name);
+    }
+
+    ctx.gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, "vulkan");
     auto ok = SDL_ClaimWindowForGPUDevice(ctx.gpu_device, ctx.window);
 
     return ok;

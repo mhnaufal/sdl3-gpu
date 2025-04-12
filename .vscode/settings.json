@@ -3,7 +3,7 @@
     "cmake.buildDirectory": "${workspaceFolder}/build",
     "cmake.installPrefix": "${workspaceFolder}/install",
     "cmake.generator": "Visual Studio 17 2022",
-    "cmake.buildBeforeRun": false,
+    "cmake.buildBeforeRun": true,
     "cmake.useCMakePresets": "auto",
     "cmake.configureSettings": {
         "CMAKE_BUILD_TYPE": "Debug", // Ganti di sini "Debug" or "Release"

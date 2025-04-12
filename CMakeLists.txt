@@ -53,6 +53,13 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif()
 
 # #######################
+# # SDL3
+# #######################
+set(SDL3_DIR "${CMAKE_SOURCE_DIR}/include/SDL3")
+set(SDL3_INCLUDE_DIR "${SDL3_DIR}/include")
+# set(SDL3_LIBRARY_DIR "${SDL3_DIR}/lib/x64")
+
+# #######################
 # # GLM
 # #######################
 set(glm_DIR ${CMAKE_SOURCE_DIR}/include/glm)
@@ -116,11 +123,7 @@ set(HEADER_SOURCES
 		include/main_helper.h
 		include/main_render.h
 
-		include/SDL3/include/SDL3/
-
 		include/glm/
-
-		include/nvrhi/
 )
 
 if(USE_IMGUI)
@@ -158,12 +161,13 @@ add_subdirectory(include/glm EXCLUDE_FROM_ALL)
 
 add_executable(${PROJECT_NAME} ${HEADER_SOURCES} ${CPP_SOURCES})
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/SDL3/include/SDL3/)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/glm)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/FMOD)
-target_include_directories(${PROJECT_NAME} PUBLIC ${PHYSX_INCLUDE_DIR})
-target_include_directories(${PROJECT_NAME} PUBLIC ${NVRHI_INCLUDE_DIR})
+target_include_directories(${PROJECT_NAME} PUBLIC ${SDL_INCLUDE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/include
+	${CMAKE_CURRENT_SOURCE_DIR}/include/glm
+	${FMOD_INCLUDE_DIR}
+	${PHYSX_INCLUDE_DIR}
+	${NVRHI_INCLUDE_DIR}
+)
 
 if(USE_IMGUI)
 	target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui)
@@ -244,6 +248,7 @@ if(WINDOWS)
 endif()
 
 if(WINDOWS)
+	# file(GLOB SDL3_DLLS "${SDL3_LIBRARY_DIR}/*.dll")
 	add_custom_command(
 		TARGET ${PROJECT_NAME} POST_BUILD COMMAND
 		${CMAKE_COMMAND} -E copy_if_different
@@ -273,16 +278,28 @@ if(WINDOWS)
 		)
 	endif()
 
-	file(GLOB PHYSX_DLLS "${PHYSX_DIR}/lib/*")
-	add_custom_target(copy_physx_dlls ALL
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			${PHYSX_DLLS}
-			$<TARGET_FILE_DIR:${PROJECT_NAME}>
-			COMMENT "Copy all PhysX DLLs to executable directory\n"
-	)
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+		file(GLOB PHYSX_DLLS "${PHYSX_DEBUG_LIBRARY_DIR}/*.dll")
+		add_custom_command(
+			TARGET ${PROJECT_NAME} POST_BUILD COMMAND
+			${CMAKE_COMMAND} -E copy_if_different
+				${PHYSX_DLLS}
+				$<TARGET_FILE_DIR:${PROJECT_NAME}>
+				VERBATIM
+				COMMENT "Copy all PhysX DLLs Debug to executable directory\n"
+		)
+	else()
+		file(GLOB PHYSX_DLLS "${PHYSX_RELEASE_LIBRARY_DIR}/*.dll")
+		add_custom_command(
+			TARGET ${PROJECT_NAME} POST_BUILD COMMAND
+			${CMAKE_COMMAND} -E copy_if_different
+				${PHYSX_DLLS}
+				$<TARGET_FILE_DIR:${PROJECT_NAME}>
+				VERBATIM
+				COMMENT "Copy all PhysX DLLs Release to executable directory\n"
+		)
+	endif()
 endif()
 
 file(COPY resource/ DESTINATION ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/resource)
 file(COPY shaders/ DESTINATION ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/shaders)
-
-add_dependencies(${PROJECT_NAME} copy_physx_dlls)
