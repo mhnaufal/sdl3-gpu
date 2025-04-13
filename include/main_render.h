@@ -22,6 +22,9 @@
 #include "SDL3/include/SDL3/SDL_log.h"
 #include "SDL3/include/SDL3/SDL_hints.h"
 
+// NVRHI
+#include "nvrhi/nvrhi.h"
+
 // STD
 #include <array>
 #include <cstddef>
@@ -74,6 +77,7 @@ struct Vec3Buffer {
 struct ContextRenderForge {};
 
 namespace gpu {
+
 auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxglob) -> bool;
 auto destroy_window(context::ContextRender& ctx) -> void;
 auto process_input(context::ContextRender& ctxren, context::ContextGlobal& ctxglob) -> void;
@@ -85,7 +89,11 @@ auto create_gpu_shader_sdl(
     context::ShaderType shader_type,
     Uint32 num_uniform_buffer) -> void;
 auto create_graphic_pipeline_sdl(context::ContextRender& ctx) -> void;
-auto do_render_pass_sdl(context::ContextRender& ctxren, SDL_GPUBuffer& vertex_buffer, context::UniformBufferObject& ubo) -> void;
+auto do_render_pass_sdl(
+    context::ContextRender& ctxren,
+    SDL_GPUBuffer& vertex_buffer,
+    context::UniformBufferObject& ubo,
+    SDL_GPUBuffer& index_buffer) -> void;
 
 /****************************************/
 // Window & Renderer
@@ -260,7 +268,7 @@ inline auto create_graphic_pipeline_sdl(context::ContextRender& ctx) -> void
     ctx.graphic_pipeline = pipeline;
 }
 
-inline auto do_render_pass_sdl(context::ContextRender& ctxren, SDL_GPUBuffer& vertex_buffer, context::UniformBufferObject& ubo) -> void
+inline auto do_render_pass_sdl(context::ContextRender& ctxren, SDL_GPUBuffer& vertex_buffer, context::UniformBufferObject& ubo, SDL_GPUBuffer& index_buffer) -> void
 {
     //* [5] Begin render pass: where we actually doing the rendering, which encoded into Command Buffer
     auto color_info = SDL_GPUColorTargetInfo{};
@@ -277,19 +285,25 @@ inline auto do_render_pass_sdl(context::ContextRender& ctxren, SDL_GPUBuffer& ve
         // - Bind pipeline
         SDL_BindGPUGraphicsPipeline(render_pass, ctxren.graphic_pipeline);
 
-        // - Bind vertex buffer/data & Bind unform buffer/data
+        //? Vertex Buffer | Bind vertex buffer/data & Bind unform buffer/data
         auto gpu_buffer_binding = SDL_GPUBufferBinding{};
         gpu_buffer_binding.buffer = &vertex_buffer;
         SDL_BindGPUVertexBuffers(render_pass, 0, &gpu_buffer_binding, 1);
 
+        //? Index Buffer | - Bind index buffer/data & Bind unform buffer/data
+        gpu_buffer_binding = SDL_GPUBufferBinding{};
+        gpu_buffer_binding.buffer = &index_buffer;
+        SDL_BindGPUIndexBuffer(render_pass, &gpu_buffer_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+
         SDL_PushGPUVertexUniformData(
             ctxren.command_buffer,
-            0, // bindings
+            0, // binding Id yg ada di dalam vert_manual.glsl
             &ubo,
             sizeof(ubo));
 
         // - draw calls
-        SDL_DrawGPUPrimitives(render_pass, 3, 1, 0, 0);
+        // SDL_DrawGPUPrimitives(render_pass, 3, 1, 0, 0);          //? use Vertex Buffer here
+        SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);   //? use Index Buffer here
 
     //* [7] End render pass
     SDL_EndGPURenderPass(render_pass);

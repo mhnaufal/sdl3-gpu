@@ -1,11 +1,11 @@
 // NOT A PROJECT TO BE TAKEN SERIOUSLY
 
-#include "include/main_render.h"
 #include "include/main_audio.h"
 #include "include/main_global.h"
-#include "include/main_helper.h"
 #include "include/main_gui.h"
+#include "include/main_helper.h"
 #include "include/main_physic.h"
+#include "include/main_render.h"
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 {
@@ -13,17 +13,16 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 
     SDL_SetLogPriority(SDL_LOG_CATEGORY_VIDEO, SDL_LOG_PRIORITY_DEBUG);
     SDL_SetLogPriority(SDL_LOG_CATEGORY_GPU, SDL_LOG_PRIORITY_DEBUG);
-    SDL_SetHint(SDL_HINT_VIDEO_FORCE_EGL, "0");  // Avoid EGL conflicts
+    // SDL_SetHint(SDL_HINT_VIDEO_FORCE_EGL, "0");
 
     context::ContextAudio ctxaud{};
+    context::ContextPhysic ctxphy{};
     context::ContextRender ctxren{};
     context::ContextGlobal ctxglob{};
     ctxglob.window_width = 1280;
     ctxglob.window_height = 720;
 
     ctxglob.is_playing = context::gpu::create_window(ctxren, ctxglob);
-
-    context::ContextPhysic ctxphy{};
 
     /* Using Vertex Buffer: 
     ? Dengan ini kita bisa spesify data vertices yg ingin kita gambar lewat C++ instead of dari shader.
@@ -40,18 +39,22 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
     * [5] Bind Vertex Buffer to draw call
     ? https://vulkan-tutorial.com/Vertex_buffers/Vertex_buffer_creation
     */
-    context::Vec3Buffer vertices[3] = {
+    context::Vec3Buffer vertices[4] = {
         {
             {-0.5f, -0.5f, 0.0f},       // position
             {1.0f, 0.0f, 0.0f, 1.0f}    // color
         },
         {
-            {0.0f, 0.5f, 0.0f},
-            {0.5f, 1.0f, 0.0f, 1.0f}
+            {0.5f, -0.5f, 0.0f},
+            {0.0f, 1.0f, 0.0f, 1.0f}
         },
         {
-            {0.5f, -0.5f, 0.0f},
-            {0.2f, 0.7f, 0.3f, 1.0f}
+            {-0.5f, 0.5f, 0.0f},
+            {0.0f, 0.0f, 1.0f, 1.0f}
+        },
+        {
+            {0.5f, 0.5f, 0.0f},
+            {1.0f, 1.0f, 1.0f, 0.8f}
         }
     };
     auto vertices_byte_size = LENGTH(vertices) * sizeof(vertices[0]);
@@ -61,25 +64,51 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
     vertex_buffer_create_info.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
     auto vertex_buffer = SDL_CreateGPUBuffer(ctxren.gpu_device, &vertex_buffer_create_info);
 
+    /*
+    ? Index Buffer
+    * instead of copy-pasting vertex buffer multiple times, we can use index buffer
+    */
+    Uint32 indices[] = {
+        0, 1, 2,
+        1, 2, 3
+    };
+    auto indices_byte_size = LENGTH(indices) * sizeof(indices[0]);
+
+    auto index_buffer_create_info = SDL_GPUBufferCreateInfo{};
+    index_buffer_create_info.size = (Uint32)indices_byte_size;
+    index_buffer_create_info.usage = SDL_GPU_BUFFERUSAGE_INDEX;
+    auto index_buffer = SDL_CreateGPUBuffer(ctxren.gpu_device, &index_buffer_create_info);
+
     auto transfer_buffer_create_info = SDL_GPUTransferBufferCreateInfo{};
     transfer_buffer_create_info.usage = SDL_GPUTransferBufferUsage::SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    transfer_buffer_create_info.size = (Uint32)vertices_byte_size;
+    transfer_buffer_create_info.size = (Uint32)((Uint32)vertices_byte_size + (Uint32)indices_byte_size);
     auto transfer_buffer = SDL_CreateGPUTransferBuffer(ctxren.gpu_device, &transfer_buffer_create_info);
 
-    auto transfer_memory = SDL_MapGPUTransferBuffer(ctxren.gpu_device, transfer_buffer, false);
+    uint8_t* transfer_memory = reinterpret_cast<uint8_t*>(SDL_MapGPUTransferBuffer(ctxren.gpu_device, transfer_buffer, false));
     memcpy(transfer_memory, &vertices, vertices_byte_size);
+    memcpy(transfer_memory + vertices_byte_size, &indices, indices_byte_size);
     SDL_UnmapGPUTransferBuffer(ctxren.gpu_device, transfer_buffer);
 
     auto copy_cmd_buffer = SDL_AcquireGPUCommandBuffer(ctxren.gpu_device);
     auto copy_pass =
     SDL_BeginGPUCopyPass(copy_cmd_buffer);
-        auto buffer_location = SDL_GPUTransferBufferLocation{};
-        buffer_location.transfer_buffer = transfer_buffer;
-        auto buffer_region = SDL_GPUBufferRegion{};
-        buffer_region.buffer = vertex_buffer;
-        buffer_region.size = (Uint32)vertices_byte_size;
-        buffer_region.offset = 0;
-            SDL_UploadToGPUBuffer(copy_pass, &buffer_location, &buffer_region, false);
+        auto vertex_buffer_location = SDL_GPUTransferBufferLocation{};
+        vertex_buffer_location.transfer_buffer = transfer_buffer;
+        vertex_buffer_location.offset = 0;
+        auto vertex_buffer_region = SDL_GPUBufferRegion{};
+        vertex_buffer_region.buffer = vertex_buffer;                   //? use Vertex Buffer here
+        vertex_buffer_region.offset = 0;
+        vertex_buffer_region.size = (Uint32)vertices_byte_size;
+        SDL_UploadToGPUBuffer(copy_pass, &vertex_buffer_location, &vertex_buffer_region, false);
+        /********************************************/
+        auto index_buffer_location = SDL_GPUTransferBufferLocation{};
+        index_buffer_location.transfer_buffer = transfer_buffer;
+        index_buffer_location.offset = (Uint32)vertices_byte_size;    //* since we're using Index Buffer, don't forget to add the offset based on the transfer buffer that we set.
+        auto index_buffer_region = SDL_GPUBufferRegion{};
+        index_buffer_region.buffer = index_buffer;                    //? use Index Buffer here
+        index_buffer_region.offset = 0;                               //! destination offset
+        index_buffer_region.size = (Uint32)indices_byte_size;
+        SDL_UploadToGPUBuffer(copy_pass, &index_buffer_location, &index_buffer_region, false);
     SDL_EndGPUCopyPass(copy_pass);
 
     auto ok2 = SDL_SubmitGPUCommandBuffer(copy_cmd_buffer);
@@ -152,11 +181,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 #ifdef USE_IMGUI
             ctxgui.do_render_pass_imgui(ctxren, dd);
 #else
-            context::gpu::do_render_pass_sdl(ctxren, *vertex_buffer, ubo);
+            context::gpu::do_render_pass_sdl(ctxren, *vertex_buffer, ubo, *index_buffer);
 #endif
         }
 
-        // [8] Submit command buffer
+        //* [8] Submit command buffer
         SDL_SubmitGPUCommandBuffer(ctxren.command_buffer);
     }
 
