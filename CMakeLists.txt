@@ -123,6 +123,8 @@ set(HEADER_SOURCES
 		include/main_helper.h
 		include/main_render.h
 
+		include/stb_image.h
+
 		include/glm/
 )
 

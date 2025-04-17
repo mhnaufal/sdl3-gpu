@@ -57,6 +57,7 @@ struct ContextRender {
     SDL_GPUShader* vertex_shader{};
     SDL_GPUShader* fragment_shader{};
     SDL_GPUGraphicsPipeline* graphic_pipeline{};
+    SDL_GPUSampler* sampler{};
 
     const char* error{};
     float rotation_rad{};
@@ -112,7 +113,7 @@ auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxgl
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
     SDL_CHECK_ERROR(ctxren, "Failed to create Window", false);
 
-    //* Latest NVDIA problem
+    //* Latest NVIDIA problem
     //* https://forums.developer.nvidia.com/t/crash-when-creating-vulkan-swapchain-with-driver-545-on-wayland/284574
     //* Need to be called inside HERE!
     auto ok = init_gpu_device_sdl(ctxren);

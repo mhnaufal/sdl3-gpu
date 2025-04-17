@@ -2,9 +2,14 @@
 
 #pragma once
 
+#define STB_IMAGE_IMPLEMENTATION
+
+// Thirdparties
 #include "FMOD/fmod_errors.h"
 #include "SDL3/include/SDL3/SDL_error.h"
+#include "stb_image.h"
 
+// STL
 #include <fstream>
 #include <vector>
 

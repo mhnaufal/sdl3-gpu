@@ -1,5 +1,6 @@
 // NOT A PROJECT TO BE TAKEN SERIOUSLY
 
+#include "include/SDL3/include/SDL3/SDL_gpu.h"
 #include "include/main_audio.h"
 #include "include/main_global.h"
 #include "include/main_gui.h"
@@ -24,7 +25,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 
     ctxglob.is_playing = context::gpu::create_window(ctxren, ctxglob);
 
-    /* Using Vertex Buffer: 
+    /* 
+    ? Vertex Buffer: 
     ? Dengan ini kita bisa spesify data vertices yg ingin kita gambar lewat C++ instead of dari shader.
     ? Kita tinggal ngasih tau bagaimana struktur data yg kita kirim ke GPU
     * [1] Describe Vertex Attributes & Vertex Buffer in pipeline
@@ -111,14 +113,42 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
         SDL_UploadToGPUBuffer(copy_pass, &index_buffer_location, &index_buffer_region, false);
     SDL_EndGPUCopyPass(copy_pass);
 
-    auto ok2 = SDL_SubmitGPUCommandBuffer(copy_cmd_buffer);
+    auto is_cmd_buffer_ready = SDL_SubmitGPUCommandBuffer(copy_cmd_buffer);
     SDL_ReleaseGPUTransferBuffer(ctxren.gpu_device, transfer_buffer);
 
-    /* 
-    ! "1" Because UBO exists inside vertex_glsl, but not fragment_glsl
+    /*
+    ? Texture Sampling
+    * [1] Load texture pixels from file
+    * [2] Create texture on the GPU
+    * [3] Upload texture pixels to the GPU
+    * [4] Assign texture coordinates to vertices
+    * [5] Create sampler for the shaders
+    * [6] Make sample colors from texture
     */
-    context::gpu::create_gpu_shader_sdl(ctxren, std::string{"./shaders/shader.spv.vert"}, context::ShaderType::VERTEX, 1);
-    context::gpu::create_gpu_shader_sdl(ctxren, std::string{"./shaders/shader.spv.frag"}, context::ShaderType::FRAGMENT, 0);
+    {
+        int width, height, channel;
+        unsigned char* image_pixels = stbi_load("./resource/nvidia-logo.png", &width, &height, &channel, 0);
+        printf("Image size: %d x %d x %d\n", width, height, channel);
+        defer(stbi_image_free(image_pixels));
+
+        auto gpu_sampler_create_info = SDL_GPUSamplerCreateInfo{};
+
+        ctxren.sampler = SDL_CreateGPUSampler(ctxren.gpu_device, &gpu_sampler_create_info);
+        SDL_CHECK_ERROR(ctxren, "Failed to GPU Sampler", false);
+    }
+
+    context::gpu::create_gpu_shader_sdl(
+        ctxren, 
+        std::string{"./shaders/shader.spv.vert"}, 
+        context::ShaderType::VERTEX, 
+        Uint32{1}                                                    // ! "1" Because UBO exists inside vertex_glsl, but not fragment_glsl
+    );
+    context::gpu::create_gpu_shader_sdl(
+        ctxren, 
+        std::string{"./shaders/shader.spv.frag"},
+        context::ShaderType::FRAGMENT, 
+        0
+    );
 
     context::gpu::create_graphic_pipeline_sdl(ctxren);
     SDL_ReleaseGPUShader(ctxren.gpu_device, ctxren.vertex_shader);
@@ -141,11 +171,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
     ctxren.rotation_rad = glm::radians(-45.0f);
     ctxglob.last_tick = SDL_GetTicks();
 
-    if (ctxglob.is_playing && ok2) {
+    if (ctxglob.is_playing && is_cmd_buffer_ready) {
         ctxaud.PlayMusic("./resource/middleast.mp3");
     }
 
-    while (ctxglob.is_playing && ok2) {
+    while (ctxglob.is_playing && is_cmd_buffer_ready) {
         //? FMOD AUDIO
         ctxaud.UpdateMusic();
 
