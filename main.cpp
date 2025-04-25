@@ -1,16 +1,74 @@
 // NOT A PROJECT TO BE TAKEN SERIOUSLY
 
-#include "include/SDL3/include/SDL3/SDL_gpu.h"
-#include "include/main_audio.h"
 #include "include/main_global.h"
-#include "include/main_gui.h"
-#include "include/main_helper.h"
-#include "include/main_physic.h"
-#include "include/main_render.h"
 
+#ifdef ANDROID
+#elif defined(WINDOWS)
+#    include "include/SDL3/include/SDL3/SDL_gpu.h"
+#    include "include/main_audio.h"
+#    include "include/main_gui.h"
+#    include "include/main_helper.h"
+#    include "include/main_physic.h"
+#    include "include/main_render.h"
+#endif
+
+#ifdef ANDROID
+static SDL_Window *window = NULL;
+static SDL_Renderer *renderer = NULL;
+
+static SDL_FRect mouseposrect;
+
+SDL_AppResult SDL_AppIterate(void *appstate)
+{
+    Uint8 r;
+    /* fade between shades of red every 3 seconds, from 0 to 255. */
+    r = (Uint8) ((((float) (SDL_GetTicks() % 3000)) / 3000.0f) * 255.0f);
+    SDL_SetRenderDrawColor(renderer, r, 0, 0, 255);
+    /* you have to draw the whole window every frame. Clearing it makes sure the whole thing is sane. */
+    SDL_RenderClear(renderer);  /* clear whole window to that fade color. */
+    /* set the color to white */
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    /* draw a square where the mouse cursor currently is. */
+    SDL_RenderFillRect(renderer, &mouseposrect);
+    /* put everything we drew to the screen. */
+    SDL_RenderPresent(renderer);
+    return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
+{
+    switch (event->type) {
+        case SDL_EVENT_QUIT:  /* triggers on last window close and other things. End the program. */
+            return SDL_APP_SUCCESS;
+    }
+    return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
+{
+    SDL_SetAppMetadata("SDL Hello World Example", "1.0", "com.example.sdl-hello-world");
+        if (!SDL_Init(SDL_INIT_VIDEO)) {
+        SDL_Log("SDL_Init(SDL_INIT_VIDEO) failed: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+
+    if (!SDL_CreateWindowAndRenderer("Hello SDL", 640, 480, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
+        SDL_Log("SDL_CreateWindowAndRenderer() failed: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+    return SDL_APP_CONTINUE;
+}
+
+void SDL_AppQuit(void *appstate, SDL_AppResult result)
+{
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+}
+#elif WINDOWS
 int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 {
-    printf("####################\n### %s ###\n####################\n\n", PLATFORM_NAME);
+    fprintf(stdout, "####################\n### %s ###\n####################\n\n", PLATFORM_NAME);
 
     SDL_SetLogPriority(SDL_LOG_CATEGORY_VIDEO, SDL_LOG_PRIORITY_DEBUG);
     SDL_SetLogPriority(SDL_LOG_CATEGORY_GPU, SDL_LOG_PRIORITY_DEBUG);
@@ -226,3 +284,4 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 
     return 0;
 }
+#endif

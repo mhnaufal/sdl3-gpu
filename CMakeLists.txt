@@ -79,9 +79,9 @@ if(WINDOWS)
 elseif(ANDROID)
 	find_library(log-lib log)
 	set(FMOD_LIBRARY_DIR "${FMOD_DIR}/lib/android")
-	set(FMOD_LIBRARY "${FMOD_LIBRARY_DIR}/fmod_vc.lib")
-    set(FMOD_DEBUG_LIBRARY "${FMOD_LIBRARY_DIR}/fmodL_vc.lib")
-    set(FMOD_RELEASE_LIBRARY "${FMOD_LIBRARY_DIR}/fmod_vc.lib")
+	# set(FMOD_LIBRARY "${FMOD_LIBRARY_DIR}/fmod_vc.lib")
+    set(FMOD_DEBUG_LIBRARY "${FMOD_LIBRARY_DIR}/libfmodL.so")
+    set(FMOD_RELEASE_LIBRARY "${FMOD_LIBRARY_DIR}/libfmod.so")
 endif()
 
 # #######################
@@ -152,16 +152,20 @@ if(USE_IMGUI)
 			include/imgui/imgui_impl_win32.cpp
 		)
 	elseif(ANDROID)
-		list(APPEND CPP_SOURCES
-			include/imgui/imgui_impl_android.cpp
-		)
+		# list(APPEND CPP_SOURCES
+		# 	include/imgui/imgui_impl_android.cpp
+		# )
 	endif()
 endif()
 
 add_subdirectory(include/SDL3 EXCLUDE_FROM_ALL)
 add_subdirectory(include/glm EXCLUDE_FROM_ALL)
 
-add_executable(${PROJECT_NAME} ${HEADER_SOURCES} ${CPP_SOURCES})
+if(ANDROID)
+	add_library(${PROJECT_NAME} SHARED ${CPP_SOURCES})
+else()
+	add_executable(${PROJECT_NAME} ${HEADER_SOURCES} ${CPP_SOURCES})
+endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${SDL_INCLUDE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -207,22 +211,24 @@ elseif(ANDROID)
 	)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	target_link_libraries(${PROJECT_NAME} PRIVATE
-		${PHYSX_DEBUG_LIBRARY_DIR}/PhysX_64.lib
-		${PHYSX_DEBUG_LIBRARY_DIR}/PhysXExtensions_static_64.lib
-		${PHYSX_DEBUG_LIBRARY_DIR}/PhysXPvdSDK_static_64.lib
-		${PHYSX_DEBUG_LIBRARY_DIR}/PhysXCommon_64.lib
-		${PHYSX_DEBUG_LIBRARY_DIR}/PhysXFoundation_64.lib
-	)
-else()
-	target_link_libraries(${PROJECT_NAME} PRIVATE
-		${PHYSX_RELEASE_LIBRARY_DIR}/PhysX_64.lib
-		${PHYSX_RELEASE_LIBRARY_DIR}/PhysXExtensions_static_64.lib
-		${PHYSX_RELEASE_LIBRARY_DIR}/PhysXPvdSDK_static_64.lib
-		${PHYSX_RELEASE_LIBRARY_DIR}/PhysXCommon_64.lib
-		${PHYSX_RELEASE_LIBRARY_DIR}/PhysXFoundation_64.lib
-	)
+if(WINDOWS)
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+		target_link_libraries(${PROJECT_NAME} PRIVATE
+			${PHYSX_DEBUG_LIBRARY_DIR}/PhysX_64.lib
+			${PHYSX_DEBUG_LIBRARY_DIR}/PhysXExtensions_static_64.lib
+			${PHYSX_DEBUG_LIBRARY_DIR}/PhysXPvdSDK_static_64.lib
+			${PHYSX_DEBUG_LIBRARY_DIR}/PhysXCommon_64.lib
+			${PHYSX_DEBUG_LIBRARY_DIR}/PhysXFoundation_64.lib
+		)
+	else()
+		target_link_libraries(${PROJECT_NAME} PRIVATE
+			${PHYSX_RELEASE_LIBRARY_DIR}/PhysX_64.lib
+			${PHYSX_RELEASE_LIBRARY_DIR}/PhysXExtensions_static_64.lib
+			${PHYSX_RELEASE_LIBRARY_DIR}/PhysXPvdSDK_static_64.lib
+			${PHYSX_RELEASE_LIBRARY_DIR}/PhysXCommon_64.lib
+			${PHYSX_RELEASE_LIBRARY_DIR}/PhysXFoundation_64.lib
+		)
+	endif()
 endif()
 
 # #######################
