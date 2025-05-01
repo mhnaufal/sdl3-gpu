@@ -1,65 +1,67 @@
 plugins {
-     id 'com.android.application'
+    id 'com.android.application'
 }
 
 // def buildWithCMake = project.hasProperty('BUILD_WITH_CMAKE');
-def buildWithCMake = true;
+def buildWithCMake = true
 
 android {
-    namespace = "org.libsdl.app"
-    compileSdkVersion 35
+    namespace = "org.libsdl.bubuk"
+    compileSdk 35
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 35
         versionCode 1
         versionName "1.0"
+
         externalNativeBuild {
-            ndkBuild {
-                arguments "APP_PLATFORM=android-21"
-                // abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
-                abiFilters 'arm64-v8a'
-            }
+            // ndkBuild {
+            //     arguments "APP_PLATFORM=android-21"
+            //     // abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            //     abiFilters 'arm64-v8a'
+            // }
             cmake {
                 arguments "-DANDROID_PLATFORM=android-21", "-DANDROID_STL=c++_static"
-                // abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
-                abiFilters 'arm64-v8a'
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
             }
         }
     }
+
+    externalNativeBuild {
+        if (buildWithCMake) {
+            cmake {
+                path '../../CMakeLists.txt'
+                version = '3.30.3'
+            }
+        } else {
+            ndkBuild {
+                // path 'jni/Android.mk'
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-    applicationVariants.all { variant ->
-        tasks["merge${variant.name.capitalize()}Assets"]
-            .dependsOn("externalNativeBuild${variant.name.capitalize()}")
-    }
-    if (!project.hasProperty('EXCLUDE_NATIVE_LIBS')) {
-        sourceSets.main {
-            jniLibs.srcDir 'libs'
-        }
-        externalNativeBuild {
-            if (buildWithCMake) {
-                cmake {
-                    // path 'jni/CMakeLists.txt'
-                    path '../../CMakeLists.txt'
-                    version "3.30.3"
-                }
-            } else {
-                ndkBuild {
-                    path 'jni/Android.mk'
-                }
-            }
-        }
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    buildFeatures {
+        prefab true
+    }
+
     lint {
         abortOnError = false
     }
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    // implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation files('libs/SDL3-3.2.10.aar')
 }

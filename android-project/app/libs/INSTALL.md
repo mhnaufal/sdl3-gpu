@@ -1,13 +1,13 @@
 
 # Using this package
 
-This package contains SDL built for the Android platform.
+This package contains SDL3 built for the Android platform.
 
 ## Gradle integration
 
 For integration with CMake/ndk-build, it uses [prefab](https://google.github.io/prefab/).
 
-Copy the aar archive (SDL3-3.2.0.aar) to a `app/libs` directory of your project.
+Copy the aar archive (SDL3-3.2.10.aar) to a `app/libs` directory of your project.
 
 In `app/build.gradle` of your Android project, add:
 ```
@@ -18,7 +18,7 @@ android {
     }
 }
 dependencies {
-    implementation files('libs/SDL3-3.2.0.aar')
+    implementation files('libs/SDL3-3.2.10.aar')
     /* ... */
 }
 ```
@@ -51,7 +51,7 @@ $(call import-module,prefab/SDL3)
 If you want to build a project without Gradle,
 running the following command will extract the Android archive into a more common directory structure.
 ```
-python SDL3-3.2.0.aar -o android_prefix
+python SDL3-3.2.10.aar -o android_prefix
 ```
 Add `--help` for a list of all available options.
 

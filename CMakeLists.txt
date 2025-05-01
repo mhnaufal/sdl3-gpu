@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.30.3)
 
 project(
 	bubuk
 	VERSION 1.0.0
 	DESCRIPTION "bubuk Game Engine | DON'T USE THIS PLEASE"
-	LANGUAGES CXX
+	LANGUAGES CXX C
 )
 
 # Set default build type if not specified
@@ -21,9 +21,9 @@ option(USE_IMGUI "Build with ImGUI support" OFF)
 # Platform detection
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	set(WINDOWS TRUE)
-	add_definitions(-DWIN32 -D_WINDOWS)
+	add_definitions(-DWIN64 -DWINDOWS)
 	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-		add_definitions(-D_WIN64)
+		add_definitions(-DWIN64)
 	endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
 	set(ANDROID TRUE)
@@ -78,8 +78,8 @@ if(WINDOWS)
     set(FMOD_RELEASE_DLL "${FMOD_LIBRARY_DIR}/fmod.dll")
 elseif(ANDROID)
 	find_library(log-lib log)
+	find_library(android-lib android)
 	set(FMOD_LIBRARY_DIR "${FMOD_DIR}/lib/android")
-	# set(FMOD_LIBRARY "${FMOD_LIBRARY_DIR}/fmod_vc.lib")
     set(FMOD_DEBUG_LIBRARY "${FMOD_LIBRARY_DIR}/libfmodL.so")
     set(FMOD_RELEASE_LIBRARY "${FMOD_LIBRARY_DIR}/libfmod.so")
 endif()
@@ -152,9 +152,9 @@ if(USE_IMGUI)
 			include/imgui/imgui_impl_win32.cpp
 		)
 	elseif(ANDROID)
-		# list(APPEND CPP_SOURCES
-		# 	include/imgui/imgui_impl_android.cpp
-		# )
+		list(APPEND CPP_SOURCES
+			include/imgui/imgui_impl_android.cpp
+		)
 	endif()
 endif()
 
@@ -187,6 +187,7 @@ if(WINDOWS)
     endif()
 elseif(ANDROID)
 	find_library(log-lib log)
+	find_library(android-lib android)
 endif()
 
 if(WINDOWS)
@@ -205,9 +206,10 @@ if(WINDOWS)
 	endif()
 elseif(ANDROID)
 	target_link_libraries(${PROJECT_NAME} PRIVATE 
-		SDL3::SDL3 ${SDL3_LIBRARIES} 
-		${FMOD_DEBUG_LIBRARY} 
+		SDL3::SDL3
+		# ${FMOD_DEBUG_LIBRARY} 
 		${log-lib}
+		${android-lib}
 	)
 endif()
 
