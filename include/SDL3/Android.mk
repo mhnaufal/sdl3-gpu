@@ -159,4 +159,3 @@ include $(BUILD_STATIC_LIBRARY)
 
 $(call import-module,android/cpufeatures)
 
-include $(call all-named-subdir-makefiles, libvulkan nulldrv tools)
