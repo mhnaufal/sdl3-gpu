@@ -29,6 +29,9 @@
         android:name="android.hardware.type.pc"
         android:required="false" />
 
+    <!-- VULKANJING -->
+    <uses-feature android:name="android.hardware.vulkan.version" android:required="true" />
+
     <!-- Audio recording support -->
     <!-- if you want to record audio, uncomment this. -->
     <!-- <uses-permission android:name="android.permission.RECORD_AUDIO" /> -->

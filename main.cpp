@@ -6,34 +6,62 @@
 #    include "include/SDL3/include/SDL3/SDL_gpu.h"
 #    include "include/main_audio.h"
 #    include "include/main_gui.h"
-#    include "include/main_helper.h"
 #    include "include/main_physic.h"
-#    include "include/main_render.h"
 #elif defined(ANDROID)
 #endif
 
+#include "include/main_helper.h"
+#include "include/main_render.h"
+
 #ifdef ANDROID
-static SDL_Window *window = NULL;
-static SDL_Renderer *renderer = NULL;
-static SDL_FRect mouseposrect;
-int main(int argc, char *argv[]) {
-    (void)argc;
-    (void)argv;
-    if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_Init failed (%s)", SDL_GetError());
-        return 1;
+SDL_AppResult SDL_AppIterate(void* appstate)
+{
+    return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event)
+{
+    /*
+    switch (event->type) {
+        case SDL_EVENT_QUIT:
+            return SDL_APP_SUCCESS;
+        case SDL_EVENT_KEY_DOWN:
+            if (event->key.scancode == SDL_SCANCODE_ESCAPE) {
+                return SDL_APP_SUCCESS;
+            }
+            break;
+        case SDL_EVENT_MOUSE_MOTION:
+            break;
+    }
+    */
+    auto* app = static_cast<context::ContextRender*>(appstate);
+
+    return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
+{
+    ANDROID_LOG_VERBOSE("PLATFORM NAME: %s", PLATFORM_NAME);
+    context::ContextRender ctxren{};
+    context::ContextGlobal ctxglob{};
+    ctxglob.window_width = 1280;
+    ctxglob.window_height = 720;
+    ctxglob.is_playing = context::gpu::create_window(ctxren, ctxglob);
+
+    if (!ctxglob.is_playing) {
+        ANDROID_LOG_ERROR("Failed to create Android window");
+        return SDL_APP_FAILURE;
     }
 
-    ANDROID_LOG_DEBUG("bubuk Engine %s", PLATFORM_NAME);
+    *appstate = new context::ContextRender(ctxren);
 
-    if (!SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Hello World",
-                                 "!! Your SDL project successfully runs on Android !!", NULL)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_ShowSimpleMessageBox failed (%s)", SDL_GetError());
-        return 1;
-    }
+    return SDL_APP_CONTINUE;
+}
 
-    SDL_Quit();
-    return 0;
+void SDL_AppQuit(void* appstate, SDL_AppResult result)
+{
+    auto* app = static_cast<context::ContextRender*>(appstate);
+    defer(context::gpu::destroy_window(*app));
 }
 
 #elif defined(WINDOWS)
@@ -163,7 +191,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
         auto gpu_sampler_create_info = SDL_GPUSamplerCreateInfo{};
 
         ctxren.sampler = SDL_CreateGPUSampler(ctxren.gpu_device, &gpu_sampler_create_info);
-        SDL_CHECK_ERROR(ctxren, "Failed to GPU Sampler", false);
+        SDL_CHECK_ERROR("Failed to GPU Sampler", false);
     }
 
     context::gpu::create_gpu_shader_sdl(

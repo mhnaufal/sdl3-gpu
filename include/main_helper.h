@@ -16,13 +16,27 @@
 /****************************************/
 // Helper Macros
 /****************************************/
-#define SDL_CHECK_ERROR(CTX, ERROR_MSG, RETURN)                                                    \
-    CTX.error = SDL_GetError();                                                                    \
-    if (*CTX.error != NULL) {                                                                      \
-        fprintf(stderr, ERROR_MSG);                                                                \
-        fprintf(stderr, CTX.error);                                                                \
-        return RETURN;                                                                             \
-    }
+#ifdef ANDROID
+#define SDL_CHECK_ERROR(ERROR_MSG, RETURN)                                                         \
+    do {                                                                                           \
+        const char* error = SDL_GetError();                                                        \
+        if (error == nullptr || *error != '\0') {                                                  \
+            ANDROID_LOG_ERROR("%s: %s\n", ERROR_MSG, error);                                         \
+            SDL_ClearError();                                                                      \
+            return RETURN;                                                                         \
+        }                                                                                          \
+    } while (0);
+#elif defined(WINDOWS)
+#define SDL_CHECK_ERROR(ERROR_MSG, RETURN)                                                         \
+    do {                                                                                           \
+        const char* error = SDL_GetError();                                                        \
+        if (error == nullptr || *error != '\0') {                                                  \
+            fprintf(stderr, "%s: %s\n", ERROR_MSG, error);                                           \
+            SDL_ClearError();                                                                      \
+            return RETURN;                                                                         \
+        }                                                                                          \
+    } while (0);
+#endif
 
 #define LENGTH(x) (sizeof(x) / sizeof((x)[0]))
 

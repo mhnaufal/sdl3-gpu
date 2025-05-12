@@ -4,6 +4,8 @@
 ! JANGAN PERNAH PAKAI std::vector
 */
 
+// TODO: Create ALL CONTEXT
+
 #pragma once
 
 #include <stdio.h>
@@ -12,14 +14,16 @@
 #include <stdint.h>
 constexpr const char* PLATFORM_NAME = "WINDOWS";
 #elif defined(ANDROID)
-// #    define SDL_MAIN_USE_CALLBACKS
+#    define SDL_MAIN_USE_CALLBACKS
 #    include <SDL3/SDL.h>
 #    include <SDL3/SDL_main.h>
 #    include <android/log.h>
 #    include <unistd.h>
 constexpr const char* PLATFORM_NAME = "ANDROID";
 #    define LOG_TAG "Bubuk"
-#    define ANDROID_LOG_DEBUG(...) __android_log_print(ANDROID_LOG_VERBOSE, LOG_TAG, __VA_ARGS__)
+#    define ANDROID_LOG_VERBOSE(...) __android_log_print(ANDROID_LOG_VERBOSE, LOG_TAG, __VA_ARGS__)
+#    define ANDROID_LOG_DEBUG(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+#    define ANDROID_LOG_ERROR(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 #endif
 
 namespace context {

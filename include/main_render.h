@@ -59,7 +59,6 @@ struct ContextRender {
     SDL_GPUGraphicsPipeline* graphic_pipeline{};
     SDL_GPUSampler* sampler{};
 
-    const char* error{};
     float rotation_rad{};
 };
 
@@ -101,6 +100,10 @@ auto do_render_pass_sdl(
 /****************************************/
 auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxglob) -> bool
 {
+    SDL_SetHint(SDL_HINT_GPU_DRIVER, "vulkan");
+    SDL_SetHint(SDL_HINT_VULKAN_LIBRARY, "libvulkan.so");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
+
     if (SDL_Init(SDL_INIT_VIDEO) != true) {
         fprintf(stderr, "Failed to initialize SDL");
         return false;
@@ -110,17 +113,17 @@ auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxgl
         "Bubuk Engine",
         ctxglob.window_width,
         ctxglob.window_height,
-        SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
-    SDL_CHECK_ERROR(ctxren, "Failed to create Window", false);
+        SDL_WINDOW_VULKAN);
+    SDL_CHECK_ERROR("Failed to create Window", false);
 
     //* Latest NVIDIA problem
     //* https://forums.developer.nvidia.com/t/crash-when-creating-vulkan-swapchain-with-driver-545-on-wayland/284574
     //* Need to be called inside HERE!
     auto ok = init_gpu_device_sdl(ctxren);
-    SDL_CHECK_ERROR(ctxren, "Failed to initialize GPU device to be used", false);
+    SDL_CHECK_ERROR("Failed to initialize GPU device to be used", false);
 
     ctxren.renderer = SDL_CreateRenderer(ctxren.window, nullptr);
-    SDL_CHECK_ERROR(ctxren, "Failed to create Renderer", false);
+    SDL_CHECK_ERROR("Failed to create Renderer", false);
 
     ctxren.frame_buffer_texture = SDL_CreateTexture(
         ctxren.renderer,
@@ -128,18 +131,18 @@ auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxgl
         SDL_TEXTUREACCESS_TARGET,
         ctxglob.window_width,
         ctxglob.window_height);
-    SDL_CHECK_ERROR(ctxren, "Failed to create Frame Buffer Texture", false);
+    SDL_CHECK_ERROR("Failed to create Frame Buffer Texture", false);
 
     return ok;
 }
 
 inline auto destroy_window(context::ContextRender& ctx) -> void
 {
-    SDL_DestroyTexture(ctx.frame_buffer_texture);
-    SDL_DestroyRenderer(ctx.renderer);
-    SDL_ReleaseWindowFromGPUDevice(ctx.gpu_device, ctx.window);
+    if (ctx.frame_buffer_texture) SDL_DestroyTexture(ctx.frame_buffer_texture);
+    if (ctx.renderer) SDL_DestroyRenderer(ctx.renderer);
+    if (ctx.gpu_device && ctx.window) SDL_ReleaseWindowFromGPUDevice(ctx.gpu_device, ctx.window);
     // SDL_DestroyGPUDevice(ctx.gpu_device); // TODO: why?
-    SDL_DestroyWindow(ctx.window);
+    if (ctx.window) SDL_DestroyWindow(ctx.window);
     SDL_Quit();
 }
 
@@ -168,17 +171,28 @@ inline auto process_input(context::ContextRender& ctxren, context::ContextGlobal
 /****************************************/
 inline auto init_gpu_device_sdl(context::ContextRender& ctx) -> bool
 {
+    std::string temp_driver_name = "";
     int device_count = SDL_GetNumGPUDrivers();
     for (int i = 0; i < device_count; i++) {
         const char* name = SDL_GetGPUDriver(i);
-        printf("[DEBUG] GPU Driver %d: %s\n", i, name);
+        printf("[DEBUG] Windows GPU Driver [%d]: %s\n", i, name);
+#ifdef ANDROID
+        ANDROID_LOG_DEBUG("Android GPU Driver [%d]: %s\n", i, name);
+        temp_driver_name = name;
+#endif
     }
 
+#ifdef ANDROID
+    ctx.gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, false, temp_driver_name.c_str());
+#elif defined(WINDOWS)
     ctx.gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, "vulkan");
+#endif
+    SDL_CHECK_ERROR("Failed to create the GPU device", false);
     auto ok = SDL_ClaimWindowForGPUDevice(ctx.gpu_device, ctx.window);
 
     return ok;
 }
+
 
 inline auto init_command_buffer_sdl(context::ContextRender& ctx) -> bool
 {

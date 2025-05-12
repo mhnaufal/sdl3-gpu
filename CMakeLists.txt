@@ -28,6 +28,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
 	set(ANDROID TRUE)
 	add_definitions(-DANDROID)
+	set(SDL_VULKAN ON)
 endif()
 
 # Arch detection
