@@ -159,7 +159,9 @@ if(USE_IMGUI)
 	endif()
 endif()
 
-add_subdirectory(include/SDL3 EXCLUDE_FROM_ALL)
+if(NOT ANDROID) # use own Android SDL3
+	add_subdirectory(include/SDL3 EXCLUDE_FROM_ALL)
+endif()
 add_subdirectory(include/glm EXCLUDE_FROM_ALL)
 
 if(ANDROID)
@@ -211,6 +213,10 @@ elseif(ANDROID)
 		# ${FMOD_DEBUG_LIBRARY} 
 		${log-lib}
 		${android-lib}
+	)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE
+		ANDROID_BLOCK_ON_PAUSE_WHEN_HIDDEN=1
+		SDL_PLATFORM_ANDROID=1
 	)
 endif()
 

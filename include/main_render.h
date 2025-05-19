@@ -101,8 +101,6 @@ auto do_render_pass_sdl(
 auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxglob) -> bool
 {
     SDL_SetHint(SDL_HINT_GPU_DRIVER, "vulkan");
-    SDL_SetHint(SDL_HINT_VULKAN_LIBRARY, "libvulkan.so");
-    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
 
     if (SDL_Init(SDL_INIT_VIDEO) != true) {
         fprintf(stderr, "Failed to initialize SDL");
@@ -113,7 +111,7 @@ auto create_window(context::ContextRender& ctxren, context::ContextGlobal& ctxgl
         "Bubuk Engine",
         ctxglob.window_width,
         ctxglob.window_height,
-        SDL_WINDOW_VULKAN);
+        SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
     SDL_CHECK_ERROR("Failed to create Window", false);
 
     //* Latest NVIDIA problem
@@ -171,21 +169,20 @@ inline auto process_input(context::ContextRender& ctxren, context::ContextGlobal
 /****************************************/
 inline auto init_gpu_device_sdl(context::ContextRender& ctx) -> bool
 {
-    std::string temp_driver_name = "";
+    std::string name{};
     int device_count = SDL_GetNumGPUDrivers();
     for (int i = 0; i < device_count; i++) {
-        const char* name = SDL_GetGPUDriver(i);
-        printf("[DEBUG] Windows GPU Driver [%d]: %s\n", i, name);
+        name = SDL_GetGPUDriver(i);
+        printf("[DEBUG] Windows GPU Driver [%d]: %s\n", i, name.c_str());
 #ifdef ANDROID
         ANDROID_LOG_DEBUG("Android GPU Driver [%d]: %s\n", i, name);
-        temp_driver_name = name;
 #endif
     }
 
 #ifdef ANDROID
-    ctx.gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, false, temp_driver_name.c_str());
+    ctx.gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, name.c_str());
 #elif defined(WINDOWS)
-    ctx.gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, "vulkan");
+    ctx.gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, true, name.c_str());
 #endif
     SDL_CHECK_ERROR("Failed to create the GPU device", false);
     auto ok = SDL_ClaimWindowForGPUDevice(ctx.gpu_device, ctx.window);
