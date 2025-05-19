@@ -23,7 +23,9 @@
 #include "SDL3/include/SDL3/SDL_hints.h"
 
 // NVRHI
+#ifndef ANDROID
 #include "nvrhi/nvrhi.h"
+#endif
 
 // STD
 #include <array>
@@ -175,7 +177,7 @@ inline auto init_gpu_device_sdl(context::ContextRender& ctx) -> bool
         name = SDL_GetGPUDriver(i);
         printf("[DEBUG] Windows GPU Driver [%d]: %s\n", i, name.c_str());
 #ifdef ANDROID
-        ANDROID_LOG_DEBUG("Android GPU Driver [%d]: %s\n", i, name);
+        ANDROID_LOG_DEBUG("Android GPU Driver [%d]: %s\n", i, name.c_str());
 #endif
     }
 
