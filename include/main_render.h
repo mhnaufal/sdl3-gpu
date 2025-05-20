@@ -59,6 +59,7 @@ struct ContextRender {
     SDL_GPUShader* vertex_shader{};
     SDL_GPUShader* fragment_shader{};
     SDL_GPUGraphicsPipeline* graphic_pipeline{};
+    SDL_GPUTexture* gpu_sampler_texture{};
     SDL_GPUSampler* sampler{};
 
     float rotation_rad{};
@@ -74,6 +75,7 @@ struct UniformBufferObject {
 struct Vec3Buffer {
     glm::vec3 position{};
     SDL_FColor color{};
+    glm::vec2 uv{};
 };
 
 struct ContextRenderForge {};
@@ -89,7 +91,8 @@ auto create_gpu_shader_sdl(
     context::ContextRender& ctx,
     const std::string& path,
     context::ShaderType shader_type,
-    Uint32 num_uniform_buffer) -> void;
+    Uint32 num_uniform_buffer,
+    Uint32 num_sampler) -> void;
 auto create_graphic_pipeline_sdl(context::ContextRender& ctx) -> void;
 auto do_render_pass_sdl(
     context::ContextRender& ctxren,
@@ -196,6 +199,7 @@ inline auto init_gpu_device_sdl(context::ContextRender& ctx) -> bool
 inline auto init_command_buffer_sdl(context::ContextRender& ctx) -> bool
 {
     ctx.command_buffer = SDL_AcquireGPUCommandBuffer(ctx.gpu_device);
+
     auto ok = SDL_WaitAndAcquireGPUSwapchainTexture(
         ctx.command_buffer, ctx.window, &ctx.gpu_texture, nullptr, nullptr);
 
@@ -206,7 +210,9 @@ inline auto create_gpu_shader_sdl(
     context::ContextRender& ctx,
     const std::string& path,
     context::ShaderType shader_type,
-    Uint32 num_uniform_buffer) -> void
+    Uint32 num_uniform_buffer,
+    Uint32 num_sampler
+) -> void
 {
     auto shader_code = read_shader_file(path.c_str());
     auto shader_create_info = SDL_GPUShaderCreateInfo{};
@@ -221,6 +227,7 @@ inline auto create_gpu_shader_sdl(
         shader_create_info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
     }
     shader_create_info.num_uniform_buffers = num_uniform_buffer;
+    shader_create_info.num_samplers = num_sampler;
 
     auto shader = SDL_CreateGPUShader(ctx.gpu_device, &shader_create_info);
 
@@ -255,7 +262,13 @@ inline auto create_graphic_pipeline_sdl(context::ContextRender& ctx) -> void
     vertex_attribute_color.offset = offsetof(context::Vec3Buffer, color);
     vertex_attribute_color.format = SDL_GPUVertexElementFormat::SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
 
-    SDL_GPUVertexAttribute vas[] = {vertex_attribute_pos, vertex_attribute_color};
+    auto vertext_attribute_uv = SDL_GPUVertexAttribute{};
+    vertext_attribute_uv.location = 2;
+    vertext_attribute_uv.buffer_slot = 0;
+    vertext_attribute_uv.offset = offsetof(context::Vec3Buffer, uv);
+    vertext_attribute_uv.format = SDL_GPUVertexElementFormat::SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
+
+    SDL_GPUVertexAttribute vas[] = {vertex_attribute_pos, vertex_attribute_color, vertext_attribute_uv};
 
     //* Vertex Buffer: struktur vertex buffer yg dipasang ke pipeline
     auto vertex_buffer_description = SDL_GPUVertexBufferDescription{};
@@ -268,7 +281,7 @@ inline auto create_graphic_pipeline_sdl(context::ContextRender& ctx) -> void
     vertex_input_state.num_vertex_buffers = 1;
     vertex_input_state.vertex_buffer_descriptions = &vertex_buffer_description;
     vertex_input_state.num_vertex_attributes =
-        (Uint32)LENGTH(vas); /* banyaknya vertex attribute(vas) yg ada hanya 2 */
+        (Uint32)LENGTH(vas); /* banyaknya vertex attribute(vas) yg ada hanya 3 */
     vertex_input_state.vertex_attributes = vas;
 
     auto pipeline_create_info = SDL_GPUGraphicsPipelineCreateInfo{};
@@ -314,6 +327,11 @@ inline auto do_render_pass_sdl(context::ContextRender& ctxren, SDL_GPUBuffer& ve
             0, // binding Id yg ada di dalam vert_manual.glsl
             &ubo,
             sizeof(ubo));
+
+            auto gpu_texture_sampler_binding = SDL_GPUTextureSamplerBinding{};
+            gpu_texture_sampler_binding.texture = ctxren.gpu_sampler_texture;
+            gpu_texture_sampler_binding.sampler = ctxren.sampler;
+            SDL_BindGPUFragmentSamplers(render_pass, 0, &gpu_texture_sampler_binding, 1);
 
         // - draw calls
         // SDL_DrawGPUPrimitives(render_pass, 3, 1, 0, 0);          //? use Vertex Buffer here

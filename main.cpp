@@ -69,8 +69,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 {
     fprintf(stdout, "####################\n### %s ###\n####################\n\n", PLATFORM_NAME);
 
-    SDL_SetLogPriority(SDL_LOG_CATEGORY_VIDEO, SDL_LOG_PRIORITY_DEBUG);
-    SDL_SetLogPriority(SDL_LOG_CATEGORY_GPU, SDL_LOG_PRIORITY_DEBUG);
+    // SDL_SetLogPriority(SDL_LOG_CATEGORY_VIDEO, SDL_LOG_PRIORITY_DEBUG);
+    // SDL_SetLogPriority(SDL_LOG_CATEGORY_GPU, SDL_LOG_PRIORITY_DEBUG);
     // SDL_SetHint(SDL_HINT_VIDEO_FORCE_EGL, "0");
 
     context::ContextAudio ctxaud{};
@@ -101,19 +101,23 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
     context::Vec3Buffer vertices[4] = {
         {
             {-0.5f, -0.5f, 0.0f},       // position
-            {1.0f, 0.0f, 0.0f, 1.0f}    // color
+            {1.0f, 0.0f, 0.0f, 1.0f},    // color
+            {0.0f, 0.0f} // UV coordinate
         },
         {
             {0.5f, -0.5f, 0.0f},
-            {0.0f, 1.0f, 0.0f, 1.0f}
+            {0.0f, 1.0f, 0.0f, 1.0f},
+            {1.0f, 0.0f}
         },
         {
             {-0.5f, 0.5f, 0.0f},
-            {0.0f, 0.0f, 1.0f, 1.0f}
+            {0.0f, 0.0f, 1.0f, 1.0f},
+            {0.0f, 1.0f}
         },
         {
             {0.5f, 0.5f, 0.0f},
-            {1.0f, 1.0f, 1.0f, 0.8f}
+            {1.0f, 1.0f, 1.0f, 0.8f},
+            {1.0f, 1.0f}
         }
     };
     auto vertices_byte_size = LENGTH(vertices) * sizeof(vertices[0]);
@@ -148,6 +152,39 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
     memcpy(transfer_memory + vertices_byte_size, &indices, indices_byte_size);
     SDL_UnmapGPUTransferBuffer(ctxren.gpu_device, transfer_buffer);
 
+    /*
+    ? Texture Sampling: untuk menyampling tiap texture yg ada dari file ke GPU
+    * [1] Load texture pixels from file
+    * [2] Create texture on the GPU
+    * [3] Upload texture pixels to the GPU
+    * [4] Assign texture coordinates to vertices
+    * [5] Create sampler for the shaders
+    * [6] Make sample colors from texture
+    */
+        int img_width, img_height;
+        int img_channel = 4; // RGBA
+        unsigned char* image_pixels = stbi_load("./resource/nvidia-logo.png", &img_width, &img_height, 0, img_channel);
+        int image_pixels_size = img_width * img_height * img_channel;
+        printf("Image size: %d x %d x %d\n", img_width, img_height, img_channel);
+
+        auto gpu_texture_create_info = SDL_GPUTextureCreateInfo{};
+        gpu_texture_create_info.width = (Uint32)img_width;
+        gpu_texture_create_info.height = (Uint32)img_height;
+        gpu_texture_create_info.format = SDL_GPUTextureFormat::SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+        gpu_texture_create_info.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
+        gpu_texture_create_info.layer_count_or_depth = 1;
+        gpu_texture_create_info.num_levels = 1;
+        ctxren.gpu_sampler_texture = SDL_CreateGPUTexture(ctxren.gpu_device, &gpu_texture_create_info);
+
+        auto texture_transfer_buffer_create_info = SDL_GPUTransferBufferCreateInfo{};
+        texture_transfer_buffer_create_info.usage = SDL_GPUTransferBufferUsage::SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+        texture_transfer_buffer_create_info.size = (Uint32)(image_pixels_size);
+        auto texture_transfer_buffer = SDL_CreateGPUTransferBuffer(ctxren.gpu_device, &texture_transfer_buffer_create_info);
+
+        uint8_t* texture_transfer_memory = reinterpret_cast<uint8_t*>(SDL_MapGPUTransferBuffer(ctxren.gpu_device, texture_transfer_buffer, false));
+        memcpy(texture_transfer_memory, image_pixels, image_pixels_size);
+        SDL_UnmapGPUTransferBuffer(ctxren.gpu_device, texture_transfer_buffer);
+
     auto copy_cmd_buffer = SDL_AcquireGPUCommandBuffer(ctxren.gpu_device);
     auto copy_pass =
     SDL_BeginGPUCopyPass(copy_cmd_buffer);
@@ -168,43 +205,45 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
         index_buffer_region.offset = 0;                               //! destination offset
         index_buffer_region.size = (Uint32)indices_byte_size;
         SDL_UploadToGPUBuffer(copy_pass, &index_buffer_location, &index_buffer_region, false);
+
+            //* [3] Upload texture pixels to the GPU
+            auto texture_transfer_buffer_location = SDL_GPUTextureTransferInfo{};
+            texture_transfer_buffer_location.transfer_buffer = texture_transfer_buffer;
+            texture_transfer_buffer_location.offset = 0;
+            auto texture_region = SDL_GPUTextureRegion{};
+            texture_region.texture = ctxren.gpu_sampler_texture;
+            texture_region.mip_level = 0;
+            texture_region.layer = 0;
+            texture_region.x = 0;
+            texture_region.y = 0;
+            texture_region.w = (Uint32)img_width;
+            texture_region.h = (Uint32)img_height;
+            texture_region.d = (Uint32)1;
+            SDL_UploadToGPUTexture(copy_pass, &texture_transfer_buffer_location, &texture_region, false);
     SDL_EndGPUCopyPass(copy_pass);
 
     auto is_cmd_buffer_ready = SDL_SubmitGPUCommandBuffer(copy_cmd_buffer);
     SDL_ReleaseGPUTransferBuffer(ctxren.gpu_device, transfer_buffer);
+    SDL_ReleaseGPUTransferBuffer(ctxren.gpu_device, texture_transfer_buffer);
 
-    /*
-    ? Texture Sampling
-    * [1] Load texture pixels from file
-    * [2] Create texture on the GPU
-    * [3] Upload texture pixels to the GPU
-    * [4] Assign texture coordinates to vertices
-    * [5] Create sampler for the shaders
-    * [6] Make sample colors from texture
-    */
-    {
-        int width, height, channel;
-        unsigned char* image_pixels = stbi_load("./resource/nvidia-logo.png", &width, &height, &channel, 0);
-        printf("Image size: %d x %d x %d\n", width, height, channel);
-        defer(stbi_image_free(image_pixels));
-
+        //* [5] Create sampler for the shaders
         auto gpu_sampler_create_info = SDL_GPUSamplerCreateInfo{};
-
         ctxren.sampler = SDL_CreateGPUSampler(ctxren.gpu_device, &gpu_sampler_create_info);
-        SDL_CHECK_ERROR("Failed to GPU Sampler", false);
-    }
+        SDL_CHECK_ERROR("Failed to create GPU Sampler", false);
 
     context::gpu::create_gpu_shader_sdl(
         ctxren, 
         std::string{"./shaders/shader.spv.vert"}, 
         context::ShaderType::VERTEX, 
-        Uint32{1}                                                    // ! "1" Because UBO exists inside vertex_glsl, but not fragment_glsl
+        Uint32{1},                                                    // ! "1" Because uniform UBO exists inside vertex_glsl, but not fragment_glsl
+        Uint32{0}
     );
     context::gpu::create_gpu_shader_sdl(
         ctxren, 
         std::string{"./shaders/shader.spv.frag"},
         context::ShaderType::FRAGMENT, 
-        0
+        Uint32{0},
+        Uint32{1}                                                   // ! "1" Because Uniform Sampler2D exists inside fragment_glsl
     );
 
     context::gpu::create_graphic_pipeline_sdl(ctxren);
@@ -276,6 +315,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
         SDL_SubmitGPUCommandBuffer(ctxren.command_buffer);
     }
 
+    defer(stbi_image_free(image_pixels));
 #ifdef USE_IMGUI
     defer(ctxgui.Destroy());
 #endif
