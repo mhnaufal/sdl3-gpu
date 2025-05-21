@@ -163,7 +163,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
     */
         int img_width, img_height;
         int img_channel = 4; // RGBA
-        unsigned char* image_pixels = stbi_load("./resource/nvidia-logo.png", &img_width, &img_height, 0, img_channel);
+        // unsigned char* image_pixels = stbi_load("./resource/nvidia-logo.png", &img_width, &img_height, 0, img_channel);
+        unsigned char* image_pixels = stbi_load("./resource/stone.png", &img_width, &img_height, &img_channel, 0);
         int image_pixels_size = img_width * img_height * img_channel;
         printf("Image size: %d x %d x %d\n", img_width, img_height, img_channel);
 
