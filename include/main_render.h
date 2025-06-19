@@ -98,7 +98,8 @@ auto do_render_pass_sdl(
     context::ContextRender& ctxren,
     SDL_GPUBuffer& vertex_buffer,
     context::UniformBufferObject& ubo,
-    SDL_GPUBuffer& index_buffer) -> void;
+    SDL_GPUBuffer& index_buffer,
+    Uint32 num_indices) -> void;
 
 /****************************************/
 // Window & Renderer
@@ -295,7 +296,7 @@ inline auto create_graphic_pipeline_sdl(context::ContextRender& ctx) -> void
     ctx.graphic_pipeline = pipeline;
 }
 
-inline auto do_render_pass_sdl(context::ContextRender& ctxren, SDL_GPUBuffer& vertex_buffer, context::UniformBufferObject& ubo, SDL_GPUBuffer& index_buffer) -> void
+inline auto do_render_pass_sdl(context::ContextRender& ctxren, SDL_GPUBuffer& vertex_buffer, context::UniformBufferObject& ubo, SDL_GPUBuffer& index_buffer, Uint32 num_indices) -> void
 {
     //* [5] Begin render pass: where we actually doing the rendering, which encoded into Command Buffer
     auto color_info = SDL_GPUColorTargetInfo{};
@@ -335,7 +336,7 @@ inline auto do_render_pass_sdl(context::ContextRender& ctxren, SDL_GPUBuffer& ve
 
         // - draw calls
         // SDL_DrawGPUPrimitives(render_pass, 3, 1, 0, 0);          //? use Vertex Buffer here
-        SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);   //? use Index Buffer here
+        SDL_DrawGPUIndexedPrimitives(render_pass, num_indices, 1, 0, 0, 0);   //? use Index Buffer here
 
     //* [7] End render pass
     SDL_EndGPURenderPass(render_pass);
