@@ -82,7 +82,8 @@
         "xtree": "cpp",
         "xutility": "cpp",
         "sdl_internal.h": "c",
-        "future": "c"
+        "future": "c",
+        "filesystem": "cpp"
     },
     "cSpell.words": [
         "bubuk",

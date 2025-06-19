@@ -11,31 +11,52 @@
 
 // STL
 #include <fstream>
+#include <string>
 #include <vector>
 
 /****************************************/
 // Helper Macros
 /****************************************/
 #ifdef ANDROID
-#define SDL_CHECK_ERROR(ERROR_MSG, RETURN)                                                         \
+#    define SDL_CHECK_ERROR(ERROR_MSG, RETURN)                                                     \
+        do {                                                                                       \
+            const char* error = SDL_GetError();                                                    \
+            if (error == nullptr || *error != '\0') {                                              \
+                ANDROID_LOG_ERROR("%s: %s\n", ERROR_MSG, error);                                   \
+                SDL_ClearError();                                                                  \
+                return RETURN;                                                                     \
+            }                                                                                      \
+        } while (0);
+
+#    define CHECK_ERROR(MSG, ERROR)                                                                \
+        do {                                                                                       \
+            ANDROID_LOG_ERROR(stderr, "%s: %s\n", MSG, ERROR);                                     \
+        } while (0);
+
+#define LOG_MSG(MSG)                                                                               \
     do {                                                                                           \
-        const char* error = SDL_GetError();                                                        \
-        if (error == nullptr || *error != '\0') {                                                  \
-            ANDROID_LOG_ERROR("%s: %s\n", ERROR_MSG, error);                                         \
-            SDL_ClearError();                                                                      \
-            return RETURN;                                                                         \
-        }                                                                                          \
+        ANDROID_LOG_ERROR(stdout, "%s\n", MSG);                                                    \
     } while (0);
 #elif defined(WINDOWS)
-#define SDL_CHECK_ERROR(ERROR_MSG, RETURN)                                                         \
-    do {                                                                                           \
-        const char* error = SDL_GetError();                                                        \
-        if (error == nullptr || *error != '\0') {                                                  \
-            fprintf(stderr, "%s: %s\n", ERROR_MSG, error);                                           \
-            SDL_ClearError();                                                                      \
-            return RETURN;                                                                         \
-        }                                                                                          \
-    } while (0);
+#    define SDL_CHECK_ERROR(ERROR_MSG, RETURN)                                                     \
+        do {                                                                                       \
+            const char* error = SDL_GetError();                                                    \
+            if (error == nullptr || *error != '\0') {                                              \
+                fprintf(stderr, "%s: %s\n", ERROR_MSG, error);                                     \
+                SDL_ClearError();                                                                  \
+                return RETURN;                                                                     \
+            }                                                                                      \
+        } while (0);
+
+#    define CHECK_ERROR(MSG, ERROR)                                                                \
+        do {                                                                                       \
+            fprintf(stderr, "%s: %s\n", MSG, ERROR);                                               \
+        } while (0);
+
+#    define LOG_MSG(MSG)                                                                           \
+        do {                                                                                       \
+            fprintf(stdout, "%s\n", MSG);                                                          \
+        } while (0);
 #endif
 
 #define LENGTH(x) (sizeof(x) / sizeof((x)[0]))

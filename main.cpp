@@ -7,6 +7,7 @@
 #    include "include/main_audio.h"
 #    include "include/main_gui.h"
 #    include "include/main_physic.h"
+#    include "include/main_obj.h"
 #elif defined(ANDROID)
 #endif
 
@@ -83,6 +84,25 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
     ctxglob.is_playing = context::gpu::create_window(ctxren, ctxglob);
 
     /* 
+    ? Load OBJ File
+    */
+    context::ContextObj ctxobj{"./resource/suv.obj"};
+    context::Vec3Buffer** obj_vertices = new context::Vec3Buffer*[ctxobj.faces.size()];
+    int** obj_indices = new int*[ctxobj.faces.size()];
+    int i = 0;
+    for (const auto& face : ctxobj.faces) {
+        obj_vertices[i] = new context::Vec3Buffer[face.size()];
+        obj_indices[i] = new int[face.size()];
+        for (size_t j = 0; j < face.size(); ++j) {
+            obj_vertices[i][j].position = ctxobj.positions[face[j]];
+            obj_vertices[i][j].color = SDL_FColor{1.0f, 1.0f, 1.0f, 1.0f}; // white color
+            obj_vertices[i][j].uv = ctxobj.uvs[face[j]];
+            obj_indices[i][j] = j;
+        }
+        i++;
+    }
+
+    /* 
     ? Vertex Buffer: 
     ? Dengan ini kita bisa spesify data vertices yg ingin kita gambar lewat C++ instead of dari shader.
     ? Kita tinggal ngasih tau bagaimana struktur data yg kita kirim ke GPU
@@ -120,7 +140,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
             {1.0f, 1.0f}
         }
     };
-    auto vertices_byte_size = LENGTH(vertices) * sizeof(vertices[0]);
+    auto vertices_byte_size = LENGTH(obj_vertices) * sizeof(obj_vertices[0]);
 
     auto vertex_buffer_create_info = SDL_GPUBufferCreateInfo{};
     vertex_buffer_create_info.size = (Uint32)vertices_byte_size;
@@ -148,7 +168,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
     auto transfer_buffer = SDL_CreateGPUTransferBuffer(ctxren.gpu_device, &transfer_buffer_create_info);
 
     uint8_t* transfer_memory = reinterpret_cast<uint8_t*>(SDL_MapGPUTransferBuffer(ctxren.gpu_device, transfer_buffer, false));
-    memcpy(transfer_memory, &vertices, vertices_byte_size);
+    memcpy(transfer_memory, &obj_vertices, vertices_byte_size);
     memcpy(transfer_memory + vertices_byte_size, &indices, indices_byte_size);
     SDL_UnmapGPUTransferBuffer(ctxren.gpu_device, transfer_buffer);
 
@@ -308,7 +328,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[])
 #ifdef USE_IMGUI
             ctxgui.do_render_pass_imgui(ctxren, dd);
 #else
-            context::gpu::do_render_pass_sdl(ctxren, *vertex_buffer, ubo, *index_buffer);
+            context::gpu::do_render_pass_sdl(ctxren, *vertex_buffer, ubo, *index_buffer, LENGTH(obj_indices));
 #endif
         }
 

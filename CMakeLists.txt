@@ -44,7 +44,6 @@ add_definitions(-DBUILD_TYPE_${BUILD_TYPE_UPPER})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DDEBUG -D_DEBUG)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     add_definitions(-DNDEBUG)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
@@ -103,14 +102,14 @@ set(NVRHI_RELEASE_LIBRARY_DIR "${NVRHI_DIR}/lib/release")
 
 if(MSVC)
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-		set(CMAKE_CXX_FLAGS "/Wall /W4 /sdl /EHsc /std:c++17 /MTd /analyze:quiet /O2")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /sdl /EHsc /std:c++17 /MTd /analyze:quiet /O2")
 	else()
-		set(CMAKE_CXX_FLAGS "/Wall /W4 /sdl /EHsc /Qpar /std:c++17 /MT /analyze:quiet /Od")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /sdl /EHsc /Qpar /std:c++17 /MT /analyze:quiet /Od")
 	endif()
 endif()
 
 if(CMAKE_GNU_COMPILER_ID)
-	set(CMAKE_CXX_FLAGS "-Wextra -Wall -Wpedantic")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wall -Wpedantic")
 endif()
 
 set(CPP_SOURCES
@@ -177,6 +176,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${SDL_INCLUDE_DIR}
 	${PHYSX_INCLUDE_DIR}
 	${NVRHI_INCLUDE_DIR}
 )
+
+target_compile_options(${PROJECT_NAME} PRIVATE ${CMAKE_CXX_FLAGS})
 
 if(USE_IMGUI)
 	target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui)
